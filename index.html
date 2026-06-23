@@ -120,6 +120,10 @@
       margin-top: 1rem;
     }
 
+    .hidden-section {
+      display: none;
+    }
+
     .value {
       float: right;
       opacity: 0.75;
@@ -142,7 +146,7 @@
     </div>
     <p id="statusMessage" aria-live="polite" role="status"></p>
   </main>
-  <section class="home game-area" id="gameArea" aria-label="Game area" hidden>
+  <section class="home game-area hidden-section" id="gameArea" aria-label="Game area" aria-hidden="true">
     <h2>Game Area</h2>
     <p>Welcome to the game area—your carnival adventure is ready to begin.</p>
   </section>
@@ -165,6 +169,7 @@
   </dialog>
 
   <script>
+    const CLOSE_FALLBACK_DELAY_MS = 300;
     const settingsDialog = document.getElementById('settingsDialog');
     const settingsBtn = document.getElementById('settingsBtn');
     const closeSettingsBtn = document.getElementById('closeSettingsBtn');
@@ -195,7 +200,8 @@
 
     startBtn.addEventListener('click', () => {
       statusMessage.textContent = 'The carnival is getting ready. Enjoy the show!';
-      gameArea.hidden = false;
+      gameArea.classList.remove('hidden-section');
+      gameArea.setAttribute('aria-hidden', 'false');
       gameArea.scrollIntoView({ behavior: 'smooth' });
     });
 
@@ -203,7 +209,7 @@
       window.close();
       setTimeout(() => {
         statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
-      }, 300);
+      }, CLOSE_FALLBACK_DELAY_MS);
     });
 
     refreshSettings();
