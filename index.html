@@ -142,7 +142,7 @@
     </div>
     <p id="statusMessage" aria-live="polite" role="status"></p>
   </main>
-  <section class="home game-area" id="gameArea">
+  <section class="home game-area" id="gameArea" aria-label="Game area">
     <h2>Game Area</h2>
     <p>Press Start to jump here and begin your carnival adventure.</p>
   </section>
@@ -199,7 +199,11 @@
 
     exitBtn.addEventListener('click', () => {
       window.close();
-      statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
+      setTimeout(() => {
+        if (!window.closed) {
+          statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
+        }
+      }, 300);
     });
 
     refreshSettings();
