@@ -185,7 +185,7 @@
     const soundValue = document.getElementById('soundValue');
 
     function refreshSettings() {
-      mouseSensitivityValue.textContent = `${mouseSensitivity.value}/${mouseSensitivity.max}`;
+      mouseSensitivityValue.textContent = `${Math.round((mouseSensitivity.value / mouseSensitivity.max) * 100)}%`;
       brightnessValue.textContent = `${brightness.value}%`;
       soundValue.textContent = `${sound.value}%`;
       document.documentElement.style.setProperty('--brightness', `${brightness.value}%`);
@@ -208,7 +208,9 @@
     exitBtn.addEventListener('click', () => {
       window.close();
       setTimeout(() => {
-        statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
+        if (document.visibilityState === 'visible') {
+          statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
+        }
       }, CLOSE_FALLBACK_DELAY_MS);
     });
 
