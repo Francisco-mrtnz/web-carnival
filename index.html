@@ -125,6 +125,7 @@
       <button id="settingsBtn" type="button">Settings</button>
       <button id="exitBtn" type="button">Exit</button>
     </div>
+    <p id="statusMessage" aria-live="polite"></p>
   </main>
 
   <dialog id="settingsDialog">
@@ -153,6 +154,7 @@
     const mouseSensitivity = document.getElementById('mouseSensitivity');
     const brightness = document.getElementById('brightness');
     const sound = document.getElementById('sound');
+    const statusMessage = document.getElementById('statusMessage');
     const mouseSensitivityValue = document.getElementById('mouseSensitivityValue');
     const brightnessValue = document.getElementById('brightnessValue');
     const soundValue = document.getElementById('soundValue');
@@ -172,17 +174,16 @@
     });
 
     startBtn.addEventListener('click', () => {
-      startBtn.textContent = 'Starting...';
-      setTimeout(() => {
-        startBtn.textContent = 'Start';
-      }, 800);
+      statusMessage.textContent = 'The carnival is getting ready. Enjoy the show!';
     });
 
     exitBtn.addEventListener('click', () => {
       window.close();
-      if (!window.closed) {
-        window.location.href = 'about:blank';
-      }
+      setTimeout(() => {
+        if (!window.closed) {
+          statusMessage.textContent = 'This tab cannot be closed automatically. Please close it manually.';
+        }
+      }, 150);
     });
 
     refreshSettings();
