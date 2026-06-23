@@ -132,7 +132,7 @@
       <button id="settingsBtn" type="button">Settings</button>
       <button id="exitBtn" type="button">Exit</button>
     </div>
-    <p id="statusMessage" aria-live="polite"></p>
+    <p id="statusMessage" aria-live="polite" role="status"></p>
   </main>
 
   <dialog id="settingsDialog">
@@ -186,7 +186,9 @@
 
     exitBtn.addEventListener('click', () => {
       window.close();
-      statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
+      setTimeout(() => {
+        statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
+      }, 120);
     });
 
     refreshSettings();
