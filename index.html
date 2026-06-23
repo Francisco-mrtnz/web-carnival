@@ -162,12 +162,13 @@
     const brightness = document.getElementById('brightness');
     const sound = document.getElementById('sound');
     const statusMessage = document.getElementById('statusMessage');
+    const CLOSE_FEEDBACK_DELAY_MS = 120;
     const mouseSensitivityValue = document.getElementById('mouseSensitivityValue');
     const brightnessValue = document.getElementById('brightnessValue');
     const soundValue = document.getElementById('soundValue');
 
     function refreshSettings() {
-      mouseSensitivityValue.textContent = `${mouseSensitivity.value}/10`;
+      mouseSensitivityValue.textContent = `${mouseSensitivity.value}/${mouseSensitivity.max}`;
       brightnessValue.textContent = `${brightness.value}%`;
       soundValue.textContent = `${sound.value}%`;
       document.documentElement.style.setProperty('--brightness', `${brightness.value}%`);
@@ -188,7 +189,7 @@
       window.close();
       setTimeout(() => {
         statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
-      }, 120);
+      }, CLOSE_FEEDBACK_DELAY_MS);
     });
 
     refreshSettings();
