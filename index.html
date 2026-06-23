@@ -112,6 +112,14 @@
       font-weight: 700;
     }
 
+    #statusMessage:empty {
+      display: none;
+    }
+
+    .game-area {
+      margin-top: 1rem;
+    }
+
     .value {
       float: right;
       opacity: 0.75;
@@ -134,7 +142,7 @@
     </div>
     <p id="statusMessage" aria-live="polite" role="status"></p>
   </main>
-  <section class="home" id="gameArea" style="margin-top:1rem;">
+  <section class="home game-area" id="gameArea">
     <h2>Game Area</h2>
     <p>Press Start to jump here and begin your carnival adventure.</p>
   </section>
