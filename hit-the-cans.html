@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hit the Cans</title>
+  <style>
+    :root {
+      --bg1: #ffe8a6;
+      --bg2: #ffb576;
+      --bg3: #cd5e41;
+      --ink: #231937;
+      --panel: rgba(255, 248, 230, 0.92);
+      --accent: #c6283d;
+      --throw-fill: #2f6db2;
+      --throw-track: #d8e6f7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 15% 18%, #fff3bf, transparent 34%),
+                  radial-gradient(circle at 84% 22%, #ffd0ad, transparent 38%),
+                  linear-gradient(160deg, var(--bg1), var(--bg2) 42%, var(--bg3));
+      padding: 18px;
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+    }
+
+    .lights {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-evenly;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .lights span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-top: 8px;
+      box-shadow: 0 0 10px currentColor;
+      animation: twinkle 1.7s ease-in-out infinite;
+    }
+
+    .lights span:nth-child(3n + 1) { color: #f83b4e; background: #f83b4e; }
+    .lights span:nth-child(3n + 2) { color: #ffe752; background: #ffe752; }
+    .lights span:nth-child(3n + 3) { color: #5bb3ff; background: #5bb3ff; }
+
+    @keyframes twinkle {
+      0%, 100% { transform: scale(0.84); opacity: 0.58; }
+      50% { transform: scale(1); opacity: 1; }
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: min(980px, 100%);
+      background: repeating-linear-gradient(
+        -34deg,
+        rgba(255, 255, 255, 0.12),
+        rgba(255, 255, 255, 0.12) 14px,
+        rgba(255, 255, 255, 0) 14px,
+        rgba(255, 255, 255, 0) 30px
+      ),
+      var(--panel);
+      border-radius: 24px;
+      border: 4px solid #fff;
+      box-shadow: 0 14px 28px rgba(35, 25, 55, 0.3);
+      padding: 18px;
+    }
+
+    .top {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      margin: 0;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 #fff;
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+    }
+
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .pill {
+      background: #fff;
+      border: 2px solid rgba(47, 109, 178, 0.28);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+
+    .playzone {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 3px solid rgba(32, 26, 51, 0.2);
+      background: #f8fafc;
+      user-select: none;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #ffd89f 0%, #ffbd78 42%, #d26848 100%);
+    }
+
+    .charge-wrap {
+      margin-top: 10px;
+    }
+
+    .charge-label {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 700;
+      margin-bottom: 4px;
+      font-size: 0.92rem;
+      color: #3d3558;
+    }
+
+    .charge-track {
+      height: 16px;
+      border-radius: 999px;
+      background: var(--throw-track);
+      border: 2px solid rgba(47, 109, 178, 0.24);
+      overflow: hidden;
+    }
+
+    .charge-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #49a6ff, var(--throw-fill));
+      transition: width 60ms linear;
+    }
+
+    .instructions {
+      margin: 10px 0 0;
+      color: #433a61;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .link {
+      color: #1f4f88;
+      text-decoration: none;
+      border-bottom: 2px solid rgba(31, 79, 136, 0.3);
+      font-weight: 700;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(22, 18, 36, 0.62);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 2;
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(430px, 100%);
+      background: #fff6e1;
+      border-radius: 16px;
+      border: 3px solid #fff;
+      box-shadow: 0 12px 24px rgba(20, 17, 36, 0.35);
+      padding: 14px;
+      text-align: center;
+    }
+
+    .modal h2 {
+      margin: 0;
+      color: #c4283c;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .modal p {
+      margin: 10px 0;
+      color: #362d53;
+      font-weight: 700;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 5px 0 rgba(32, 26, 51, 0.2);
+    }
+
+    .restart {
+      background: #ffca43;
+      color: #2f2a46;
+    }
+
+    .back {
+      background: #2f6db2;
+      color: #f4f9ff;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        padding: 14px;
+      }
+
+      .instructions {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="lights" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <main class="app">
+    <section class="top">
+      <h1 class="title">Hit the Cans</h1>
+      <div class="hud">
+        <span class="pill">Score: <span id="score">0</span></span>
+        <span class="pill">Throws Left: <span id="throwsLeft">5</span></span>
+      </div>
+    </section>
+
+    <section class="playzone" id="playzone" aria-label="Hit the cans play area">
+      <canvas id="gameCanvas" width="920" height="500"></canvas>
+      <div class="overlay" id="gameOverOverlay" aria-live="polite">
+        <div class="modal">
+          <h2>Round Over</h2>
+          <p>Your score: <span id="finalScore">0</span></p>
+          <div class="btn-row">
+            <button class="btn restart" id="restartBtn" type="button">Restart Game</button>
+            <a class="btn back" href="empty.html">Back to Level Select</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="charge-wrap" aria-label="Throw strength">
+      <div class="charge-label">
+        <span>Hold mouse to charge throw</span>
+        <span id="chargeValue">0%</span>
+      </div>
+      <div class="charge-track">
+        <div class="charge-fill" id="chargeFill"></div>
+      </div>
+    </section>
+
+    <p class="instructions">Click and hold to build throw power. Release to throw. You get 5 throws.</p>
+
+    <section class="actions">
+      <a class="link" href="empty.html">Back to Level Select</a>
+      <span class="link" id="statusText">Click in the game area once to enable sound.</span>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const playzone = document.getElementById("playzone");
+    const scoreEl = document.getElementById("score");
+    const throwsLeftEl = document.getElementById("throwsLeft");
+    const chargeFill = document.getElementById("chargeFill");
+    const chargeValue = document.getElementById("chargeValue");
+    const statusText = document.getElementById("statusText");
+    const gameOverOverlay = document.getElementById("gameOverOverlay");
+    const finalScoreEl = document.getElementById("finalScore");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const groundY = 430;
+    const stackBaseY = 390;
+    const canW = 44;
+    const canH = 30;
+    const ballRadius = 12;
+    const gravity = 820;
+
+    let score = 0;
+    let throwsLeft = 5;
+    let cans = [];
+    let balls = [];
+    let isCharging = false;
+    let chargeStrength = 0;
+    let chargeStart = 0;
+    let lastPointer = { x: canvas.width / 2, y: 140 };
+    let gameOver = false;
+    let lastTime = performance.now();
+
+    let audioCtx = null;
+    let musicTimer = null;
+    let rhythmStep = 0;
+
+    const melody = [392, 440, 523.25, 440, 392, 349.23, 392, 440];
+    const bass = [130.81, null, 130.81, null, 146.83, null, 123.47, null];
+
+    function ensureAudio() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        statusText.textContent = "Audio is not supported in this browser.";
+        return;
+      }
+
+      if (!audioCtx) {
+        audioCtx = new AudioContextClass();
+      }
+
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+
+      if (!musicTimer) {
+        musicTimer = window.setInterval(playMusicStep, 280);
+      }
+
+      statusText.textContent = "Stall band is playing.";
+    }
+
+    function makeBeep(freq, duration, type, gainValue) {
+      if (!audioCtx || !freq) {
+        return;
+      }
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+
+      gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playMusicStep() {
+      if (!audioCtx || audioCtx.state !== "running") {
+        return;
+      }
+
+      const tone = melody[rhythmStep % melody.length];
+      const low = bass[rhythmStep % bass.length];
+
+      makeBeep(tone, 0.2, "square", 0.028);
+      if (low) {
+        makeBeep(low, 0.22, "triangle", 0.024);
+      }
+
+      rhythmStep = (rhythmStep + 1) % melody.length;
+    }
+
+    function playThrowSound() {
+      makeBeep(520, 0.07, "triangle", 0.07);
+      window.setTimeout(() => makeBeep(680, 0.09, "triangle", 0.08), 45);
+    }
+
+    function playHitSound() {
+      makeBeep(760, 0.05, "sine", 0.08);
+      window.setTimeout(() => makeBeep(580, 0.08, "sine", 0.06), 30);
+    }
+
+    function createStack(centerX, levels, tenPointLevel) {
+      const stack = [];
+      for (let i = 0; i < levels; i += 1) {
+        stack.push({
+          x: centerX - canW / 2,
+          y: stackBaseY - (i + 1) * canH,
+          w: canW,
+          h: canH,
+          vx: 0,
+          vy: 0,
+          knocked: false,
+          scored: false,
+          value: i === tenPointLevel ? 10 : 5
+        });
+      }
+      return stack;
+    }
+
+    function resetGame() {
+      score = 0;
+      throwsLeft = 5;
+      balls = [];
+      gameOver = false;
+      isCharging = false;
+      chargeStrength = 0;
+      chargeFill.style.width = "0%";
+      chargeValue.textContent = "0%";
+      gameOverOverlay.classList.remove("open");
+
+      cans = [
+        ...createStack(300, 3, -1),
+        ...createStack(460, 5, 2),
+        ...createStack(620, 3, -1)
+      ];
+
+      updateHud();
+    }
+
+    function updateHud() {
+      scoreEl.textContent = String(score);
+      throwsLeftEl.textContent = String(throwsLeft);
+    }
+
+    function drawStallBackdrop() {
+      ctx.fillStyle = "#9b4f37";
+      ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+
+      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      for (let i = 0; i < canvas.width; i += 34) {
+        ctx.fillRect(i, 110, 16, 220);
+      }
+
+      ctx.fillStyle = "#f7e3bf";
+      ctx.fillRect(0, 320, canvas.width, 18);
+
+      ctx.fillStyle = "#713726";
+      ctx.fillRect(0, 338, canvas.width, 20);
+
+      ctx.fillStyle = "#fff0d0";
+      ctx.fillRect(0, 0, canvas.width, 86);
+
+      ctx.fillStyle = "#c42b40";
+      for (let i = 0; i < canvas.width; i += 64) {
+        ctx.fillRect(i, 0, 32, 86);
+      }
+    }
+
+    function drawCan(can) {
+      const x = can.x;
+      const y = can.y;
+      ctx.fillStyle = can.value === 10 ? "#ffd34e" : "#d7e5f7";
+      ctx.fillRect(x, y, can.w, can.h);
+
+      ctx.strokeStyle = "#2f5d95";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, can.w, can.h);
+
+      ctx.fillStyle = "rgba(255,255,255,0.65)";
+      ctx.fillRect(x + 5, y + 5, can.w - 10, 6);
+
+      ctx.fillStyle = "#2c2a43";
+      ctx.font = "bold 13px Verdana";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(can.value), x + can.w / 2, y + can.h / 2);
+    }
+
+    function drawBall(ball) {
+      ctx.beginPath();
+      ctx.fillStyle = "#4f90d5";
+      ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.closePath();
+
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(255,255,255,0.65)";
+      ctx.lineWidth = 2;
+      ctx.arc(ball.x - 2, ball.y - 2, ballRadius - 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+    function updatePhysics(dt) {
+      for (const ball of balls) {
+        ball.vy += gravity * dt;
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
+
+        if (ball.y + ballRadius >= groundY) {
+          ball.y = groundY - ballRadius;
+          ball.vy *= -0.35;
+          ball.vx *= 0.86;
+          if (Math.abs(ball.vy) < 30) {
+            ball.vy = 0;
+          }
+        }
+      }
+
+      balls = balls.filter((ball) => ball.x > -40 && ball.x < canvas.width + 40 && ball.y < canvas.height + 60);
+
+      for (const can of cans) {
+        if (can.knocked) {
+          can.vy += gravity * dt;
+          can.x += can.vx * dt;
+          can.y += can.vy * dt;
+          if (can.y + can.h >= groundY) {
+            can.y = groundY - can.h;
+            can.vy *= -0.2;
+            can.vx *= 0.84;
+            if (Math.abs(can.vy) < 20) {
+              can.vy = 0;
+            }
+          }
+          continue;
+        }
+
+        for (const ball of balls) {
+          const nearestX = Math.max(can.x, Math.min(ball.x, can.x + can.w));
+          const nearestY = Math.max(can.y, Math.min(ball.y, can.y + can.h));
+          const dx = ball.x - nearestX;
+          const dy = ball.y - nearestY;
+          if (dx * dx + dy * dy <= ballRadius * ballRadius) {
+            can.knocked = true;
+            can.vx = ball.vx * 0.35 + (ball.x - (can.x + can.w / 2)) * 3;
+            can.vy = Math.min(-120, ball.vy * 0.35 - 120);
+            ball.vx *= 0.65;
+            ball.vy *= -0.25;
+            if (!can.scored) {
+              can.scored = true;
+              score += can.value;
+              updateHud();
+            }
+            playHitSound();
+            break;
+          }
+        }
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStallBackdrop();
+      for (const can of cans) {
+        drawCan(can);
+      }
+      for (const ball of balls) {
+        drawBall(ball);
+      }
+    }
+
+    function endGameIfNeeded() {
+      if (throwsLeft <= 0 && balls.length === 0 && !gameOver) {
+        gameOver = true;
+        finalScoreEl.textContent = String(score);
+        gameOverOverlay.classList.add("open");
+      }
+    }
+
+    function gameLoop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.033);
+      lastTime = now;
+
+      updatePhysics(dt);
+      render();
+      endGameIfNeeded();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function clientToCanvas(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = ((clientX - rect.left) / rect.width) * canvas.width;
+      const y = ((clientY - rect.top) / rect.height) * canvas.height;
+      return { x, y };
+    }
+
+    function startCharge(clientX, clientY) {
+      if (gameOver || throwsLeft <= 0) {
+        return;
+      }
+      ensureAudio();
+      isCharging = true;
+      chargeStart = performance.now();
+      lastPointer = clientToCanvas(clientX, clientY);
+    }
+
+    function updateCharge(clientX, clientY) {
+      if (!isCharging) {
+        return;
+      }
+      lastPointer = clientToCanvas(clientX, clientY);
+      const elapsed = performance.now() - chargeStart;
+      chargeStrength = Math.min(1, elapsed / 1400);
+      const pct = Math.round(chargeStrength * 100);
+      chargeFill.style.width = `${pct}%`;
+      chargeValue.textContent = `${pct}%`;
+    }
+
+    function releaseThrow() {
+      if (!isCharging || gameOver || throwsLeft <= 0) {
+        return;
+      }
+
+      isCharging = false;
+      const throwPower = Math.max(0.1, chargeStrength);
+      const originX = 120;
+      const originY = groundY - ballRadius;
+      const dx = lastPointer.x - originX;
+      const dy = lastPointer.y - originY;
+      const len = Math.max(1, Math.hypot(dx, dy));
+      const speed = 260 + throwPower * 620;
+
+      const ball = {
+        x: originX,
+        y: originY,
+        vx: (dx / len) * speed,
+        vy: (dy / len) * speed
+      };
+
+      balls.push(ball);
+      throwsLeft -= 1;
+      chargeStrength = 0;
+      chargeFill.style.width = "0%";
+      chargeValue.textContent = "0%";
+      updateHud();
+      playThrowSound();
+    }
+
+    playzone.addEventListener("pointerdown", (event) => {
+      startCharge(event.clientX, event.clientY);
+    });
+
+    playzone.addEventListener("pointermove", (event) => {
+      updateCharge(event.clientX, event.clientY);
+    });
+
+    window.addEventListener("pointerup", () => {
+      releaseThrow();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      resetGame();
+    });
+
+    resetGame();
+    render();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

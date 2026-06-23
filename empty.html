@@ -3,15 +3,304 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Empty Page</title>
+  <title>Carnival Level Select</title>
   <style>
+    :root {
+      --bg1: #ffce73;
+      --bg2: #ff8a67;
+      --bg3: #4f7fc4;
+      --ink: #1a1730;
+      --panel: rgba(255, 248, 225, 0.9);
+      --ring: #ffffff;
+      --accent: #d62939;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
-      background: #fff;
-      font-family: sans-serif;
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 12% 20%, #ffe59d, transparent 35%),
+                  radial-gradient(circle at 80% 28%, #ffab8d, transparent 42%),
+                  radial-gradient(circle at 25% 80%, #91d2ff, transparent 32%),
+                  linear-gradient(145deg, var(--bg1), var(--bg2) 45%, var(--bg3));
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    .lights {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-evenly;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .lights span {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-top: 8px;
+      box-shadow: 0 0 12px currentColor;
+      animation: twinkle 1.8s ease-in-out infinite;
+    }
+
+    .lights span:nth-child(3n + 1) { color: #ff3b4f; background: #ff3b4f; }
+    .lights span:nth-child(3n + 2) { color: #ffe754; background: #ffe754; }
+    .lights span:nth-child(3n + 3) { color: #56b2ff; background: #56b2ff; }
+
+    @keyframes twinkle {
+      0%, 100% { transform: scale(0.84); opacity: 0.55; }
+      50% { transform: scale(1); opacity: 1; }
+    }
+
+    .panel {
+      width: min(860px, 100%);
+      border: 4px solid var(--ring);
+      border-radius: 24px;
+      background: repeating-linear-gradient(
+        -35deg,
+        rgba(255, 255, 255, 0.13),
+        rgba(255, 255, 255, 0.13) 14px,
+        rgba(255, 255, 255, 0) 14px,
+        rgba(255, 255, 255, 0) 30px
+      ),
+      var(--panel);
+      box-shadow: 0 14px 28px rgba(26, 23, 48, 0.28);
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      margin: 0;
+      text-align: center;
+      font-size: clamp(1.9rem, 5vw, 3rem);
+      text-transform: uppercase;
+      color: var(--accent);
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 #fff;
+    }
+
+    .subtitle {
+      margin: 8px 0 18px;
+      text-align: center;
+      color: #4e4669;
+      font-weight: 700;
+    }
+
+    .level-shell {
+      border: 2px dashed rgba(47, 109, 178, 0.5);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.58);
+      margin-bottom: 14px;
+    }
+
+    .level-shell p {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #3f375d;
+      text-align: center;
+    }
+
+    .games {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .game-card {
+      border: 2px solid rgba(47, 109, 178, 0.25);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .game-link {
+      color: inherit;
+      text-decoration: none;
+      display: block;
+    }
+
+    .game-link:focus-visible {
+      outline: 3px solid #2f6db2;
+      outline-offset: 3px;
+      border-radius: 12px;
+    }
+
+    .game-card h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      text-transform: uppercase;
+      color: #2f2a46;
+    }
+
+    .game-card small {
+      margin-top: 8px;
+      font-weight: 700;
+      color: #5a5377;
+    }
+
+    .status {
+      margin-top: 12px;
+      margin-bottom: 0;
+      text-align: center;
+      min-height: 1.3em;
+      color: #433b61;
+      font-size: 0.93rem;
+    }
+
+    .back-link {
+      margin-top: 10px;
+      display: inline-block;
+      text-decoration: none;
+      color: #264f84;
+      font-weight: 700;
+      border-bottom: 2px solid rgba(38, 79, 132, 0.35);
+    }
+
+    .back-wrap {
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      .games {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
-<body></body>
+<body>
+  <div class="lights" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <main class="panel">
+    <h1>Carnival Level Select</h1>
+    <p class="subtitle">Blank board for upcoming attractions.</p>
+
+    <section class="level-shell" aria-label="Blank level select">
+      <p>Level Select is currently blank. Choose a game title below (coming soon).</p>
+    </section>
+
+    <section class="games" aria-label="Game titles">
+      <a class="game-link" href="hit-the-cans.html" aria-label="Play Hit the Cans">
+        <article class="game-card">
+          <h2>Hit the Cans</h2>
+          <small>Play Now</small>
+        </article>
+      </a>
+      <article class="game-card">
+        <h2>Spray the Target</h2>
+        <small>Coming Soon</small>
+      </article>
+      <article class="game-card">
+        <h2>Mirror Maze</h2>
+        <small>Coming Soon</small>
+      </article>
+    </section>
+
+    <p class="status" id="statusText">Click anywhere once to start carnival music.</p>
+    <div class="back-wrap">
+      <a class="back-link" href="index.html">Back to Carnival Gate</a>
+    </div>
+  </main>
+
+  <script>
+    const statusText = document.getElementById("statusText");
+    let audioCtx = null;
+    let masterGain = null;
+    let musicTimer = null;
+    let step = 0;
+
+    const melodyPattern = [523.25, 659.25, 783.99, 659.25, 698.46, 659.25, 587.33, 659.25];
+    const bassPattern = [196, null, 196, null, 220, null, 174.61, null];
+
+    function playNote(frequency, duration, type, intensity) {
+      if (!audioCtx || !masterGain || !frequency) {
+        return;
+      }
+
+      const osc = audioCtx.createOscillator();
+      const noteGain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = frequency;
+
+      noteGain.gain.setValueAtTime(intensity, audioCtx.currentTime);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+      osc.connect(noteGain);
+      noteGain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playCarnivalStep() {
+      if (!audioCtx || audioCtx.state !== "running") {
+        return;
+      }
+
+      const melodyHz = melodyPattern[step % melodyPattern.length];
+      const bassHz = bassPattern[step % bassPattern.length];
+
+      playNote(melodyHz, 0.28, "triangle", 0.13);
+      playNote(melodyHz * 0.5, 0.2, "sine", 0.04);
+      if (bassHz) {
+        playNote(bassHz, 0.3, "square", 0.06);
+      }
+
+      step = (step + 1) % melodyPattern.length;
+    }
+
+    function startMusic() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        statusText.textContent = "Audio is not supported in this browser.";
+        return;
+      }
+
+      if (!audioCtx) {
+        audioCtx = new AudioContextClass();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.14;
+        masterGain.connect(audioCtx.destination);
+      }
+
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+
+      if (!musicTimer) {
+        musicTimer = window.setInterval(playCarnivalStep, 360);
+      }
+
+      statusText.textContent = "Carnival music is playing.";
+    }
+
+    window.addEventListener("pointerdown", startMusic, { once: true });
+  </script>
+</body>
 </html>
