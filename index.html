@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carnival Home</title>
+  <style>
+    :root {
+      --carnival-red: #d62939;
+      --carnival-yellow: #ffd447;
+      --carnival-blue: #2f6db2;
+      --carnival-cream: #fff7db;
+      --carnival-night: #17122b;
+      --panel-bg: rgba(255, 247, 219, 0.88);
+      --shadow: 0 12px 28px rgba(23, 18, 43, 0.28);
+      --brightness: 1;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+      color: var(--carnival-night);
+      background: radial-gradient(circle at 20% 20%, #ffe38d, transparent 45%),
+                  radial-gradient(circle at 80% 25%, #ff8f7a, transparent 40%),
+                  radial-gradient(circle at 50% 85%, #89d0ff, transparent 35%),
+                  linear-gradient(160deg, #ffcf6d 0%, #ff8a63 48%, #5e88c7 100%);
+      filter: brightness(var(--brightness));
+      overflow-x: hidden;
+    }
+
+    body {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .lights {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-evenly;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .lights span {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-top: 8px;
+      animation: twinkle 1.8s infinite ease-in-out;
+      box-shadow: 0 0 14px currentColor;
+    }
+
+    .lights span:nth-child(3n + 1) { color: #ff3a4f; background: #ff3a4f; }
+    .lights span:nth-child(3n + 2) { color: #ffe24d; background: #ffe24d; }
+    .lights span:nth-child(3n + 3) { color: #50a8ff; background: #50a8ff; }
+
+    .lights span:nth-child(odd) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { transform: scale(0.8); opacity: 0.55; }
+      50% { transform: scale(1); opacity: 1; }
+    }
+
+    .hero {
+      width: min(760px, 100%);
+      background: repeating-linear-gradient(
+        -32deg,
+        rgba(255, 255, 255, 0.12),
+        rgba(255, 255, 255, 0.12) 16px,
+        rgba(255, 255, 255, 0) 16px,
+        rgba(255, 255, 255, 0) 32px
+      ),
+      var(--panel-bg);
+      border: 4px solid #fff;
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 26px;
+      position: relative;
+      z-index: 1;
+      transform: translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0);
+      transition: transform 120ms linear;
+    }
+
+    .title {
+      margin: 0;
+      text-align: center;
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--carnival-red);
+      text-shadow: 2px 2px 0 #fff, 5px 5px 0 rgba(47, 109, 178, 0.24);
+    }
+
+    .subtitle {
+      margin: 8px 0 22px;
+      text-align: center;
+      font-size: clamp(0.95rem, 2.5vw, 1.2rem);
+      color: #4d4569;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      max-width: 360px;
+      margin: 0 auto;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 130ms ease, box-shadow 130ms ease, filter 130ms ease;
+      box-shadow: 0 7px 0 rgba(23, 18, 43, 0.26);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      filter: saturate(1.08);
+    }
+
+    .btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 4px 0 rgba(23, 18, 43, 0.22);
+    }
+
+    .start { background: #ff5c45; color: #fff8df; }
+    .settings { background: #ffd447; color: #2f2a46; }
+    .exit { background: #2f6db2; color: #f1f8ff; }
+
+    .carrots {
+      margin: 20px auto 0;
+      text-align: center;
+      font-size: 1.04rem;
+      font-weight: 700;
+      color: #4f4a6b;
+      user-select: none;
+    }
+
+    .settings-panel {
+      margin-top: 18px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.72);
+      border-radius: 14px;
+      border: 2px solid rgba(47, 109, 178, 0.3);
+      display: none;
+    }
+
+    .settings-panel.open {
+      display: block;
+    }
+
+    .setting {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .setting:last-child {
+      margin-bottom: 0;
+    }
+
+    .setting label {
+      font-weight: 700;
+      color: #2d2742;
+    }
+
+    .setting input[type="range"] {
+      grid-column: 1 / 2;
+      width: 100%;
+      accent-color: var(--carnival-red);
+    }
+
+    .value {
+      min-width: 70px;
+      text-align: right;
+      font-weight: 700;
+      color: #4a4167;
+    }
+
+    .carrot-sprinkle {
+      position: fixed;
+      font-size: clamp(20px, 2.8vw, 28px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.75;
+      animation: bob 4s ease-in-out infinite;
+    }
+
+    .carrot-1 { top: 12%; left: 8%; }
+    .carrot-2 { top: 20%; right: 6%; animation-delay: 1s; }
+    .carrot-3 { bottom: 15%; left: 10%; animation-delay: 2s; }
+    .carrot-4 { bottom: 8%; right: 12%; animation-delay: 3s; }
+
+    @keyframes bob {
+      0%, 100% { transform: translateY(0) rotate(3deg); }
+      50% { transform: translateY(-10px) rotate(-3deg); }
+    }
+
+    .status {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 0.92rem;
+      color: #433b61;
+      min-height: 1.2em;
+    }
+
+    @media (max-width: 620px) {
+      .hero {
+        padding: 20px;
+        border-radius: 20px;
+      }
+
+      .btn {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="lights" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <div class="carrot-sprinkle carrot-1" aria-hidden="true">🥕</div>
+  <div class="carrot-sprinkle carrot-2" aria-hidden="true">🥕</div>
+  <div class="carrot-sprinkle carrot-3" aria-hidden="true">🥕</div>
+  <div class="carrot-sprinkle carrot-4" aria-hidden="true">🥕</div>
+
+  <main class="hero" id="hero">
+    <h1 class="title">Carnival Gate</h1>
+    <p class="subtitle">Step right up, choose a path, and don’t forget the carrots.</p>
+
+    <section class="buttons">
+      <button class="btn start" id="startBtn" type="button">Start</button>
+      <button class="btn settings" id="settingsBtn" type="button">Settings</button>
+      <button class="btn exit" id="exitBtn" type="button">Exit</button>
+    </section>
+
+    <section class="settings-panel" id="settingsPanel" aria-label="Settings panel">
+      <div class="setting">
+        <label for="mouseSensitivity">Mouse Sensitivity</label>
+        <span class="value" id="mouseValue">1.00x</span>
+        <input id="mouseSensitivity" type="range" min="0.2" max="2.2" step="0.1" value="1" />
+      </div>
+
+      <div class="setting">
+        <label for="brightness">Brightness</label>
+        <span class="value" id="brightnessValue">100%</span>
+        <input id="brightness" type="range" min="50" max="150" step="1" value="100" />
+      </div>
+
+      <div class="setting">
+        <label for="soundLevel">Sound Level</label>
+        <span class="value" id="soundValue">50%</span>
+        <input id="soundLevel" type="range" min="0" max="100" step="1" value="50" />
+      </div>
+    </section>
+
+    <p class="carrots">Carrot booth special: crunchy carnival carrots all day.</p>
+    <p class="status" id="statusText"></p>
+  </main>
+
+  <script>
+    const startBtn = document.getElementById("startBtn");
+    const settingsBtn = document.getElementById("settingsBtn");
+    const exitBtn = document.getElementById("exitBtn");
+    const settingsPanel = document.getElementById("settingsPanel");
+    const statusText = document.getElementById("statusText");
+    const hero = document.getElementById("hero");
+
+    const mouseSensitivity = document.getElementById("mouseSensitivity");
+    const brightness = document.getElementById("brightness");
+    const soundLevel = document.getElementById("soundLevel");
+
+    const mouseValue = document.getElementById("mouseValue");
+    const brightnessValue = document.getElementById("brightnessValue");
+    const soundValue = document.getElementById("soundValue");
+
+    let sensitivity = Number(mouseSensitivity.value);
+    let currentVolume = Number(soundLevel.value) / 100;
+
+    function updateStatus(message) {
+      statusText.textContent = message;
+    }
+
+    function playClickTone() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass || currentVolume <= 0) {
+        return;
+      }
+
+      const ctx = new AudioContextClass();
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.type = "triangle";
+      oscillator.frequency.value = 660;
+      gainNode.gain.setValueAtTime(currentVolume * 0.08, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + 0.18);
+      oscillator.onended = () => ctx.close();
+    }
+
+    startBtn.addEventListener("click", () => {
+      playClickTone();
+      window.location.href = "empty.html";
+    });
+
+    settingsBtn.addEventListener("click", () => {
+      playClickTone();
+      settingsPanel.classList.toggle("open");
+      updateStatus(settingsPanel.classList.contains("open") ? "Settings opened." : "Settings closed.");
+    });
+
+    exitBtn.addEventListener("click", () => {
+      playClickTone();
+      window.close();
+      if (!window.closed) {
+        updateStatus("Browser blocked tab close. You can close it manually.");
+      }
+    });
+
+    mouseSensitivity.addEventListener("input", (event) => {
+      sensitivity = Number(event.target.value);
+      mouseValue.textContent = `${sensitivity.toFixed(2)}x`;
+    });
+
+    brightness.addEventListener("input", (event) => {
+      const amount = Number(event.target.value);
+      document.documentElement.style.setProperty("--brightness", String(amount / 100));
+      brightnessValue.textContent = `${amount}%`;
+    });
+
+    soundLevel.addEventListener("input", (event) => {
+      const level = Number(event.target.value);
+      currentVolume = level / 100;
+      soundValue.textContent = `${level}%`;
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      const x = (event.clientX / window.innerWidth - 0.5) * 12 * sensitivity;
+      const y = (event.clientY / window.innerHeight - 0.5) * 10 * sensitivity;
+      hero.style.setProperty("--parallax-x", `${x}px`);
+      hero.style.setProperty("--parallax-y", `${y}px`);
+    });
+
+    updateStatus("Welcome to the carnival.");
+  </script>
+</body>
+</html>
