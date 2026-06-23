@@ -134,6 +134,10 @@
     </div>
     <p id="statusMessage" aria-live="polite" role="status"></p>
   </main>
+  <section class="home" id="gameArea" style="margin-top:1rem;">
+    <h2>Game Area</h2>
+    <p>Press Start to jump here and begin your carnival adventure.</p>
+  </section>
 
   <dialog id="settingsDialog">
     <h2>Settings</h2>
@@ -153,7 +157,6 @@
   </dialog>
 
   <script>
-    const CLOSE_FEEDBACK_DELAY_MS = 400;
     const settingsDialog = document.getElementById('settingsDialog');
     const settingsBtn = document.getElementById('settingsBtn');
     const closeSettingsBtn = document.getElementById('closeSettingsBtn');
@@ -183,15 +186,12 @@
 
     startBtn.addEventListener('click', () => {
       statusMessage.textContent = 'The carnival is getting ready. Enjoy the show!';
+      document.getElementById('gameArea').scrollIntoView({ behavior: 'smooth' });
     });
 
     exitBtn.addEventListener('click', () => {
       window.close();
-      setTimeout(() => {
-        if (!document.hidden) {
-          statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
-        }
-      }, CLOSE_FEEDBACK_DELAY_MS);
+      statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
     });
 
     refreshSettings();
