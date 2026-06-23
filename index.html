@@ -82,6 +82,13 @@
       color: #330009;
     }
 
+    #closeSettingsBtn {
+      margin-top: 0.6rem;
+      background: linear-gradient(90deg, #42e1ff, #6988ff);
+      color: #04112b;
+      width: 100%;
+    }
+
     dialog {
       width: min(92vw, 420px);
       border: 0;
@@ -179,11 +186,7 @@
 
     exitBtn.addEventListener('click', () => {
       window.close();
-      setTimeout(() => {
-        if (!window.closed) {
-          statusMessage.textContent = 'This tab cannot be closed automatically. Please close it manually.';
-        }
-      }, 150);
+      statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
     });
 
     refreshSettings();
