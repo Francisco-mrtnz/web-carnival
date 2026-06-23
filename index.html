@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carnival Hub</title>
+  <style>
+    :root {
+      --brightness: 100%;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #fff7dc;
+      background: radial-gradient(circle at 20% 20%, #ffcb3a, transparent 35%),
+                  radial-gradient(circle at 80% 35%, #ff4663, transparent 40%),
+                  linear-gradient(135deg, #201747, #0d1027 60%);
+      filter: brightness(var(--brightness));
+    }
+
+    .home {
+      width: min(92vw, 560px);
+      padding: 2rem;
+      text-align: center;
+      border-radius: 18px;
+      background: rgba(0, 0, 0, 0.45);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 0.75rem;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      letter-spacing: 1px;
+    }
+
+    p {
+      margin-bottom: 1.75rem;
+      color: #ffe9a8;
+    }
+
+    .actions {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 0.8rem 1rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      opacity: 0.95;
+    }
+
+    #startBtn {
+      background: linear-gradient(90deg, #ffd03a, #ff8c2c);
+      color: #2b1200;
+    }
+
+    #settingsBtn {
+      background: linear-gradient(90deg, #42e1ff, #6988ff);
+      color: #04112b;
+    }
+
+    #exitBtn {
+      background: linear-gradient(90deg, #ff6f7e, #ff304f);
+      color: #330009;
+    }
+
+    dialog {
+      width: min(92vw, 420px);
+      border: 0;
+      border-radius: 12px;
+      padding: 1.25rem;
+      color: #23263f;
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .field {
+      margin: 0.9rem 0;
+      text-align: left;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: 700;
+    }
+
+    .value {
+      float: right;
+      opacity: 0.75;
+      font-weight: 400;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <main class="home">
+    <h1>🎪 Carnival Hub</h1>
+    <p>Step right up and start the fun!</p>
+    <div class="actions">
+      <button id="startBtn" type="button">Start</button>
+      <button id="settingsBtn" type="button">Settings</button>
+      <button id="exitBtn" type="button">Exit</button>
+    </div>
+  </main>
+
+  <dialog id="settingsDialog">
+    <h2>Settings</h2>
+    <div class="field">
+      <label for="mouseSensitivity">Mouse Sensitivity <span class="value" id="mouseSensitivityValue"></span></label>
+      <input id="mouseSensitivity" type="range" min="1" max="10" value="5">
+    </div>
+    <div class="field">
+      <label for="brightness">Brightness <span class="value" id="brightnessValue"></span></label>
+      <input id="brightness" type="range" min="50" max="150" value="100">
+    </div>
+    <div class="field">
+      <label for="sound">Sound <span class="value" id="soundValue"></span></label>
+      <input id="sound" type="range" min="0" max="100" value="60">
+    </div>
+    <button id="closeSettingsBtn" type="button">Close</button>
+  </dialog>
+
+  <script>
+    const settingsDialog = document.getElementById('settingsDialog');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const startBtn = document.getElementById('startBtn');
+    const exitBtn = document.getElementById('exitBtn');
+    const mouseSensitivity = document.getElementById('mouseSensitivity');
+    const brightness = document.getElementById('brightness');
+    const sound = document.getElementById('sound');
+    const mouseSensitivityValue = document.getElementById('mouseSensitivityValue');
+    const brightnessValue = document.getElementById('brightnessValue');
+    const soundValue = document.getElementById('soundValue');
+
+    function refreshSettings() {
+      mouseSensitivityValue.textContent = `${mouseSensitivity.value}/10`;
+      brightnessValue.textContent = `${brightness.value}%`;
+      soundValue.textContent = `${sound.value}%`;
+      document.documentElement.style.setProperty('--brightness', `${brightness.value}%`);
+    }
+
+    settingsBtn.addEventListener('click', () => settingsDialog.showModal());
+    closeSettingsBtn.addEventListener('click', () => settingsDialog.close());
+
+    [mouseSensitivity, brightness, sound].forEach((input) => {
+      input.addEventListener('input', refreshSettings);
+    });
+
+    startBtn.addEventListener('click', () => {
+      startBtn.textContent = 'Starting...';
+      setTimeout(() => {
+        startBtn.textContent = 'Start';
+      }, 800);
+    });
+
+    exitBtn.addEventListener('click', () => {
+      window.close();
+      if (!window.closed) {
+        window.location.href = 'about:blank';
+      }
+    });
+
+    refreshSettings();
+  </script>
+</body>
+</html>
