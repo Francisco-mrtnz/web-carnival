@@ -155,7 +155,7 @@
     <h2>Settings</h2>
     <div class="field">
       <label for="mouseSensitivity">Mouse Sensitivity <span class="value" id="mouseSensitivityValue"></span></label>
-      <input id="mouseSensitivity" type="range" min="1" max="10" step="1" value="5">
+      <input id="mouseSensitivity" type="range" min="10" max="100" step="10" value="50">
     </div>
     <div class="field">
       <label for="brightness">Brightness <span class="value" id="brightnessValue"></span></label>
@@ -185,7 +185,7 @@
     const soundValue = document.getElementById('soundValue');
 
     function refreshSettings() {
-      mouseSensitivityValue.textContent = `${Math.round((mouseSensitivity.value / mouseSensitivity.max) * 100)}%`;
+      mouseSensitivityValue.textContent = `${mouseSensitivity.value}%`;
       brightnessValue.textContent = `${brightness.value}%`;
       soundValue.textContent = `${sound.value}%`;
       document.documentElement.style.setProperty('--brightness', `${brightness.value}%`);
@@ -208,7 +208,7 @@
     exitBtn.addEventListener('click', () => {
       window.close();
       setTimeout(() => {
-        if (document.visibilityState === 'visible') {
+        if (!window.closed && document.visibilityState === 'visible') {
           statusMessage.textContent = 'If this tab did not close automatically, please close it manually.';
         }
       }, CLOSE_FALLBACK_DELAY_MS);
