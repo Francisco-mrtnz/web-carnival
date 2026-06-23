@@ -302,46 +302,129 @@
 
     let sensitivity = Number(mouseSensitivity.value);
     let currentVolume = Number(soundLevel.value) / 100;
+    let audioCtx = null;
+    let masterGain = null;
+    let musicTimer = null;
+    let melodyStep = 0;
+
+    const melodyPattern = [523.25, 659.25, 783.99, 659.25, 698.46, 659.25, 587.33, 659.25];
+    const bassPattern = [196, null, 196, null, 220, null, 174.61, null];
 
     function updateStatus(message) {
       statusText.textContent = message;
     }
 
-    function playClickTone() {
+    function ensureAudioReady() {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass || currentVolume <= 0) {
+      if (!AudioContextClass) {
         return;
       }
 
-      const ctx = new AudioContextClass();
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
+      if (!audioCtx) {
+        audioCtx = new AudioContextClass();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = currentVolume * 0.24;
+        masterGain.connect(audioCtx.destination);
+      }
 
-      oscillator.type = "triangle";
-      oscillator.frequency.value = 660;
-      gainNode.gain.setValueAtTime(currentVolume * 0.08, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
 
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      oscillator.start();
-      oscillator.stop(ctx.currentTime + 0.18);
-      oscillator.onended = () => ctx.close();
+      if (!musicTimer) {
+        musicTimer = window.setInterval(playCarnivalStep, 360);
+      }
+    }
+
+    function setMasterVolume() {
+      if (!masterGain || !audioCtx) {
+        return;
+      }
+
+      masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      masterGain.gain.setTargetAtTime(currentVolume * 0.24, audioCtx.currentTime, 0.08);
+    }
+
+    function playNote(frequency, duration, type, intensity) {
+      if (!audioCtx || !masterGain || !frequency) {
+        return;
+      }
+
+      const osc = audioCtx.createOscillator();
+      const noteGain = audioCtx.createGain();
+
+      osc.type = type;
+      osc.frequency.value = frequency;
+      noteGain.gain.setValueAtTime(intensity, audioCtx.currentTime);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+      osc.connect(noteGain);
+      noteGain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playCarnivalStep() {
+      if (!audioCtx || audioCtx.state !== "running") {
+        return;
+      }
+
+      const melodyHz = melodyPattern[melodyStep % melodyPattern.length];
+      const bassHz = bassPattern[melodyStep % bassPattern.length];
+
+      playNote(melodyHz, 0.28, "triangle", 0.13);
+      playNote(melodyHz * 0.5, 0.2, "sine", 0.04);
+
+      if (bassHz) {
+        playNote(bassHz, 0.3, "square", 0.06);
+      }
+
+      melodyStep = (melodyStep + 1) % melodyPattern.length;
+    }
+
+    function playButtonTone(buttonType) {
+      ensureAudioReady();
+      if (!audioCtx || !masterGain || currentVolume <= 0) {
+        return;
+      }
+
+      if (buttonType === "start") {
+        playNote(523.25, 0.09, "triangle", 0.18);
+        window.setTimeout(() => playNote(659.25, 0.12, "triangle", 0.2), 70);
+        return;
+      }
+
+      if (buttonType === "settings") {
+        playNote(440, 0.08, "sine", 0.14);
+        window.setTimeout(() => playNote(554.37, 0.1, "sine", 0.14), 60);
+        return;
+      }
+
+      if (buttonType === "exit") {
+        playNote(392, 0.1, "square", 0.16);
+        window.setTimeout(() => playNote(311.13, 0.15, "square", 0.14), 75);
+        return;
+      }
+
+      playNote(660, 0.13, "triangle", 0.18);
     }
 
     startBtn.addEventListener("click", () => {
-      playClickTone();
+      ensureAudioReady();
+      playButtonTone("start");
       window.location.href = "empty.html";
     });
 
     settingsBtn.addEventListener("click", () => {
-      playClickTone();
+      ensureAudioReady();
+      playButtonTone("settings");
       settingsPanel.classList.toggle("open");
       updateStatus(settingsPanel.classList.contains("open") ? "Settings opened." : "Settings closed.");
     });
 
     exitBtn.addEventListener("click", () => {
-      playClickTone();
+      ensureAudioReady();
+      playButtonTone("exit");
       window.close();
       if (!window.closed) {
         updateStatus("Browser blocked tab close. You can close it manually.");
@@ -363,7 +446,10 @@
       const level = Number(event.target.value);
       currentVolume = level / 100;
       soundValue.textContent = `${level}%`;
+      setMasterVolume();
     });
+
+    window.addEventListener("pointerdown", ensureAudioReady, { once: true });
 
     window.addEventListener("mousemove", (event) => {
       const x = (event.clientX / window.innerWidth - 0.5) * 12 * sensitivity;
