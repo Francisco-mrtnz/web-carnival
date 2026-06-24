@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spray the Target</title>
+  <style>
+    :root {
+      --bg1: #ffe8a6;
+      --bg2: #ffb576;
+      --bg3: #cd5e41;
+      --ink: #231937;
+      --panel: rgba(255, 248, 230, 0.92);
+      --accent: #c6283d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 15% 18%, #fff3bf, transparent 34%),
+                  radial-gradient(circle at 84% 22%, #ffd0ad, transparent 38%),
+                  linear-gradient(160deg, var(--bg1), var(--bg2) 42%, var(--bg3));
+      padding: 18px;
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+    }
+
+    .lights {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-evenly;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .lights span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-top: 8px;
+      box-shadow: 0 0 10px currentColor;
+      animation: twinkle 1.7s ease-in-out infinite;
+    }
+
+    .lights span:nth-child(3n + 1) { color: #f83b4e; background: #f83b4e; }
+    .lights span:nth-child(3n + 2) { color: #ffe752; background: #ffe752; }
+    .lights span:nth-child(3n + 3) { color: #5bb3ff; background: #5bb3ff; }
+
+    @keyframes twinkle {
+      0%, 100% { transform: scale(0.84); opacity: 0.58; }
+      50% { transform: scale(1); opacity: 1; }
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: min(980px, 100%);
+      background: repeating-linear-gradient(
+        -34deg,
+        rgba(255, 255, 255, 0.12),
+        rgba(255, 255, 255, 0.12) 14px,
+        rgba(255, 255, 255, 0) 14px,
+        rgba(255, 255, 255, 0) 30px
+      ),
+      var(--panel);
+      border-radius: 24px;
+      border: 4px solid #fff;
+      box-shadow: 0 14px 28px rgba(35, 25, 55, 0.3);
+      padding: 18px;
+    }
+
+    .top {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      margin: 0;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 #fff;
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+    }
+
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .pill {
+      background: #fff;
+      border: 2px solid rgba(47, 109, 178, 0.28);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+
+    .playzone {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 3px solid rgba(32, 26, 51, 0.2);
+      background: #f8fafc;
+      user-select: none;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #ffd89f 0%, #ffbd78 42%, #d26848 100%);
+    }
+
+    .instructions {
+      margin: 10px 0 0;
+      color: #433a61;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .link {
+      color: #1f4f88;
+      text-decoration: none;
+      border-bottom: 2px solid rgba(31, 79, 136, 0.3);
+      font-weight: 700;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(22, 18, 36, 0.62);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 2;
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(430px, 100%);
+      background: #fff6e1;
+      border-radius: 16px;
+      border: 3px solid #fff;
+      box-shadow: 0 12px 24px rgba(20, 17, 36, 0.35);
+      padding: 14px;
+      text-align: center;
+    }
+
+    .modal h2 {
+      margin: 0;
+      color: #c4283c;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .modal p {
+      margin: 10px 0;
+      color: #362d53;
+      font-weight: 700;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 5px 0 rgba(32, 26, 51, 0.2);
+    }
+
+    .restart {
+      background: #ffca43;
+      color: #2f2a46;
+    }
+
+    .back {
+      background: #2f6db2;
+      color: #f4f9ff;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        padding: 14px;
+      }
+
+      .instructions {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="lights" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <main class="app">
+    <section class="top">
+      <h1 class="title">Spray the Target</h1>
+      <div class="hud">
+        <span class="pill">Score: <span id="score">0</span></span>
+        <span class="pill">Time: <span id="timer">45</span>s</span>
+      </div>
+    </section>
+
+    <section class="playzone" id="playzone" aria-label="Spray the target play area">
+      <canvas id="gameCanvas" width="920" height="500"></canvas>
+      <div class="overlay" id="gameOverOverlay" aria-live="polite">
+        <div class="modal">
+          <h2>Game Over</h2>
+          <p>Your score: <span id="finalScore">0</span></p>
+          <div class="btn-row">
+            <button class="btn restart" id="restartBtn" type="button">Play Again</button>
+            <a class="btn back" href="empty.html">Back to Level Select</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="instructions">Click on targets to spray them! Earn 1-5 points for each hit.</p>
+
+    <section class="actions">
+      <a class="link" href="empty.html">Back to Level Select</a>
+      <span class="link" id="statusText">Click in the game area to start!</span>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const playzone = document.getElementById("playzone");
+    const scoreEl = document.getElementById("score");
+    const timerEl = document.getElementById("timer");
+    const statusText = document.getElementById("statusText");
+    const gameOverOverlay = document.getElementById("gameOverOverlay");
+    const finalScoreEl = document.getElementById("finalScore");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const groundY = 430;
+    const targetRadius = 30;
+
+    let score = 0;
+    let timeLeft = 45;
+    let gameActive = false;
+    let gameOver = false;
+    let targets = [];
+    let splashes = [];
+    let lastTime = performance.now();
+    let gameStartTime = null;
+
+    let audioCtx = null;
+    let musicTimer = null;
+    let rhythmStep = 0;
+
+    const melody = [392, 440, 523.25, 440, 392, 349.23, 392, 440];
+    const bass = [130.81, null, 130.81, null, 146.83, null, 123.47, null];
+
+    class Target {
+      constructor() {
+        this.x = Math.random() * (canvas.width - 100) + 50;
+        this.y = Math.random() * (groundY - 100) + 50;
+        this.radius = targetRadius;
+        this.createdAt = performance.now();
+        this.duration = 3000; // 3 seconds
+        this.pointValue = Math.floor(Math.random() * 5) + 1; // 1-5 points
+      }
+
+      isExpired(now) {
+        return (now - this.createdAt) > this.duration;
+      }
+
+      getAge(now) {
+        return now - this.createdAt;
+      }
+
+      draw(ctx) {
+        const age = this.getAge(performance.now());
+        const progress = age / this.duration;
+        
+        // Outer circle
+        ctx.beginPath();
+        ctx.strokeStyle = "#d62939";
+        ctx.lineWidth = 4;
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner circles
+        ctx.beginPath();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.fillStyle = "#d62939";
+        ctx.arc(this.x, this.y, this.radius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fade out effect near end of life
+        if (progress > 0.7) {
+          ctx.globalAlpha = 1 - (progress - 0.7) / 0.3;
+          ctx.fillStyle = "rgba(214, 41, 57, 0.2)";
+          ctx.arc(this.x, this.y, this.radius * 1.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+
+        // Draw points in center
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 16px Verdana";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(this.pointValue, this.x, this.y);
+      }
+    }
+
+    class Splash {
+      constructor(x, y, points) {
+        this.x = x;
+        this.y = y;
+        this.points = points;
+        this.createdAt = performance.now();
+        this.duration = 500; // 0.5 second animation
+      }
+
+      isExpired(now) {
+        return (now - this.createdAt) > this.duration;
+      }
+
+      getProgress(now) {
+        return (now - this.createdAt) / this.duration;
+      }
+
+      draw(ctx) {
+        const progress = this.getProgress(performance.now());
+        const radius = targetRadius * (1 + progress * 1.5);
+        const opacity = 1 - progress;
+
+        // Colored splash circles
+        ctx.globalAlpha = opacity * 0.8;
+        ctx.fillStyle = "#d62939";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner white splash
+        ctx.globalAlpha = opacity * 0.5;
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, radius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Points text
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 24px Verdana";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`+${this.points}`, this.x, this.y - 20);
+
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function ensureAudio() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        statusText.textContent = "Audio is not supported.";
+        return;
+      }
+
+      if (!audioCtx) {
+        audioCtx = new AudioContextClass();
+      }
+
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+
+      if (!musicTimer) {
+        musicTimer = window.setInterval(playMusicStep, 280);
+      }
+
+      statusText.textContent = "Carnival music is playing. Go!";
+    }
+
+    function makeBeep(freq, duration, type, gainValue) {
+      if (!audioCtx || !freq) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+
+      gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playMusicStep() {
+      if (!audioCtx || audioCtx.state !== "running") return;
+
+      const tone = melody[rhythmStep % melody.length];
+      const low = bass[rhythmStep % bass.length];
+
+      makeBeep(tone, 0.2, "square", 0.028);
+      if (low) makeBeep(low, 0.22, "triangle", 0.024);
+
+      rhythmStep = (rhythmStep + 1) % melody.length;
+    }
+
+    function playHitSound() {
+      makeBeep(800, 0.08, "sine", 0.12);
+      window.setTimeout(() => makeBeep(600, 0.1, "sine", 0.1), 40);
+    }
+
+    function drawStallBackdrop() {
+      const gradient = ctx.createLinearGradient(0, groundY, 0, canvas.height);
+      gradient.addColorStop(0, "#a8623f");
+      gradient.addColorStop(1, "#5d3821");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+
+      ctx.fillStyle = "rgba(139, 69, 19, 0.3)";
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(canvas.width * 0.15, groundY * 0.3);
+      ctx.lineTo(canvas.width * 0.15, canvas.height);
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.moveTo(canvas.width, groundY);
+      ctx.lineTo(canvas.width, 0);
+      ctx.lineTo(canvas.width * 0.85, groundY * 0.3);
+      ctx.lineTo(canvas.width * 0.85, canvas.height);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255,255,255,0.1)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        const y = groundY + (canvas.height - groundY) * (i / 4);
+        const x1 = canvas.width * 0.15;
+        const x2 = canvas.width * 0.85;
+        ctx.beginPath();
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#fff0d0";
+      ctx.fillRect(0, 0, canvas.width, 86);
+
+      ctx.fillStyle = "#c42b40";
+      for (let i = 0; i < canvas.width; i += 64) {
+        ctx.fillRect(i, 0, 32, 86);
+      }
+    }
+
+    function spawnTarget() {
+      if (gameActive && !gameOver) {
+        targets.push(new Target());
+      }
+    }
+
+    function updateGame(dt) {
+      if (!gameActive || gameOver) return;
+
+      const now = performance.now();
+      timeLeft = Math.max(0, 45 - Math.floor((now - gameStartTime) / 1000));
+      timerEl.textContent = timeLeft;
+
+      if (timeLeft <= 0) {
+        endGame();
+        return;
+      }
+
+      // Remove expired targets
+      targets = targets.filter(t => !t.isExpired(now));
+
+      // Remove expired splashes
+      splashes = splashes.filter(s => !s.isExpired(now));
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStallBackdrop();
+
+      // Draw targets
+      for (const target of targets) {
+        target.draw(ctx);
+      }
+
+      // Draw splashes
+      for (const splash of splashes) {
+        splash.draw(ctx);
+      }
+    }
+
+    function endGame() {
+      gameActive = false;
+      gameOver = true;
+      if (musicTimer) {
+        window.clearInterval(musicTimer);
+        musicTimer = null;
+      }
+      finalScoreEl.textContent = String(score);
+      gameOverOverlay.classList.add("open");
+    }
+
+    function gameLoop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.033);
+      lastTime = now;
+
+      updateGame(dt);
+      render();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function clientToCanvas(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = ((clientX - rect.left) / rect.width) * canvas.width;
+      const y = ((clientY - rect.top) / rect.height) * canvas.height;
+      return { x, y };
+    }
+
+    function startGame() {
+      if (gameActive) return;
+      ensureAudio();
+      gameActive = true;
+      gameOver = false;
+      score = 0;
+      timeLeft = 45;
+      targets = [];
+      splashes = [];
+      gameStartTime = performance.now();
+      gameOverOverlay.classList.remove("open");
+      scoreEl.textContent = "0";
+      timerEl.textContent = "45";
+
+      // Spawn first target immediately
+      spawnTarget();
+
+      // Then spawn a new target every 3 seconds
+      window.targetSpawnInterval = window.setInterval(spawnTarget, 3000);
+    }
+
+    function resetGame() {
+      if (window.targetSpawnInterval) {
+        window.clearInterval(window.targetSpawnInterval);
+      }
+      gameActive = false;
+      gameOver = false;
+      score = 0;
+      timeLeft = 45;
+      targets = [];
+      splashes = [];
+      scoreEl.textContent = "0";
+      timerEl.textContent = "45";
+      gameOverOverlay.classList.remove("open");
+    }
+
+    playzone.addEventListener("click", (event) => {
+      if (!gameActive && !gameOver) {
+        startGame();
+        return;
+      }
+
+      if (!gameActive || gameOver) return;
+
+      const { x, y } = clientToCanvas(event.clientX, event.clientY);
+
+      // Check for target hits
+      for (let i = targets.length - 1; i >= 0; i--) {
+        const target = targets[i];
+        const dx = x - target.x;
+        const dy = y - target.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance <= target.radius) {
+          // Hit!
+          score += target.pointValue;
+          scoreEl.textContent = String(score);
+          splashes.push(new Splash(target.x, target.y, target.pointValue));
+          targets.splice(i, 1);
+          playHitSound();
+          break;
+        }
+      }
+    });
+
+    restartBtn.addEventListener("click", () => {
+      resetGame();
+      startGame();
+    });
+
+    resetGame();
+    render();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
