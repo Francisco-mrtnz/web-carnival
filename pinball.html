@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pinball</title>
+  <style>
+    :root {
+      --bg1: #ffe8a6;
+      --bg2: #ffb576;
+      --bg3: #cd5e41;
+      --ink: #231937;
+      --panel: rgba(255, 248, 230, 0.92);
+      --accent: #c6283d;
+      --throw-fill: #2f6db2;
+      --throw-track: #d8e6f7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Verdana", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 15% 18%, #fff3bf, transparent 34%),
+                  radial-gradient(circle at 84% 22%, #ffd0ad, transparent 38%),
+                  linear-gradient(160deg, var(--bg1), var(--bg2) 42%, var(--bg3));
+      padding: 18px;
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+    }
+
+    .lights {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-evenly;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .lights span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-top: 8px;
+      box-shadow: 0 0 10px currentColor;
+      animation: twinkle 1.7s ease-in-out infinite;
+    }
+
+    .lights span:nth-child(3n + 1) { color: #f83b4e; background: #f83b4e; }
+    .lights span:nth-child(3n + 2) { color: #ffe752; background: #ffe752; }
+    .lights span:nth-child(3n + 3) { color: #5bb3ff; background: #5bb3ff; }
+
+    @keyframes twinkle {
+      0%, 100% { transform: scale(0.84); opacity: 0.58; }
+      50% { transform: scale(1); opacity: 1; }
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: min(980px, 100%);
+      background: repeating-linear-gradient(
+        -34deg,
+        rgba(255, 255, 255, 0.12),
+        rgba(255, 255, 255, 0.12) 14px,
+        rgba(255, 255, 255, 0) 14px,
+        rgba(255, 255, 255, 0) 30px
+      ),
+      var(--panel);
+      border-radius: 24px;
+      border: 4px solid #fff;
+      box-shadow: 0 14px 28px rgba(35, 25, 55, 0.3);
+      padding: 18px;
+    }
+
+    .top {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      margin: 0;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 #fff;
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+    }
+
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .pill {
+      background: #fff;
+      border: 2px solid rgba(47, 109, 178, 0.28);
+      border-radius: 999px;
+      padding: 6px 10px;
+    }
+
+    .playzone {
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 3px solid rgba(32, 26, 51, 0.2);
+      background: #f8fafc;
+      user-select: none;
+      touch-action: none;
+      cursor: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #ffd89f 0%, #ffbd78 42%, #d26848 100%);
+    }
+
+    .charge-wrap {
+      margin-top: 10px;
+    }
+
+    .charge-label {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 700;
+      margin-bottom: 4px;
+      font-size: 0.92rem;
+      color: #3d3558;
+    }
+
+    .charge-track {
+      height: 16px;
+      border-radius: 999px;
+      background: var(--throw-track);
+      border: 2px solid rgba(47, 109, 178, 0.24);
+      overflow: hidden;
+    }
+
+    .charge-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #49a6ff, var(--throw-fill));
+      transition: width 60ms linear;
+    }
+
+    .instructions {
+      margin: 10px 0 0;
+      color: #433a61;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .link {
+      color: #1f4f88;
+      text-decoration: none;
+      border-bottom: 2px solid rgba(31, 79, 136, 0.3);
+      font-weight: 700;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(22, 18, 36, 0.62);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 2;
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(430px, 100%);
+      background: #fff6e1;
+      border-radius: 16px;
+      border: 3px solid #fff;
+      box-shadow: 0 12px 24px rgba(20, 17, 36, 0.35);
+      padding: 14px;
+      text-align: center;
+    }
+
+    .modal h2 {
+      margin: 0;
+      color: #c4283c;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .modal p {
+      margin: 10px 0;
+      color: #362d53;
+      font-weight: 700;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 5px 0 rgba(32, 26, 51, 0.2);
+    }
+
+    .restart {
+      background: #ffca43;
+      color: #2f2a46;
+    }
+
+    .back {
+      background: #2f6db2;
+      color: #f4f9ff;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .scope-cursor {
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      border: 2px solid rgba(31, 79, 136, 0.7);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .scope-cursor::before {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(31, 79, 136, 0.7);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .scope-cursor::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 12px;
+      background: rgba(31, 79, 136, 0.7);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        padding: 14px;
+      }
+
+      .instructions {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="lights" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <div class="scope-cursor" id="scopeCursor"></div>
+
+  <main class="app">
+    <section class="top">
+      <h1 class="title">Pinball</h1>
+      <div class="hud">
+        <span class="pill">Score: <span id="score">0</span></span>
+        <span class="pill">Time: <span id="timer">60</span>s</span>
+      </div>
+    </section>
+
+    <section class="playzone" id="playzone" aria-label="Pinball play area">
+      <canvas id="gameCanvas" width="920" height="500"></canvas>
+      <div class="overlay" id="gameOverOverlay" aria-live="polite">
+        <div class="modal">
+          <h2>Game Over</h2>
+          <p>Your score: <span id="finalScore">0</span></p>
+          <div class="btn-row">
+            <button class="btn restart" id="restartBtn" type="button">Play Again</button>
+            <a class="btn back" href="empty.html">Back to Level Select</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="charge-wrap" aria-label="Throw power">
+      <div class="charge-label">
+        <span>Hold mouse to charge throw</span>
+        <span id="chargeValue">0%</span>
+      </div>
+      <div class="charge-track">
+        <div class="charge-fill" id="chargeFill"></div>
+      </div>
+    </section>
+
+    <p class="instructions">Click and hold to aim and charge. Release to throw the ball up the ramp!</p>
+
+    <section class="actions">
+      <a class="link" href="empty.html">Back to Level Select</a>
+      <span class="link" id="statusText">Click to start!</span>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const playzone = document.getElementById("playzone");
+    const scoreEl = document.getElementById("score");
+    const timerEl = document.getElementById("timer");
+    const chargeFill = document.getElementById("chargeFill");
+    const chargeValue = document.getElementById("chargeValue");
+    const statusText = document.getElementById("statusText");
+    const gameOverOverlay = document.getElementById("gameOverOverlay");
+    const finalScoreEl = document.getElementById("finalScore");
+    const restartBtn = document.getElementById("restartBtn");
+    const scopeCursor = document.getElementById("scopeCursor");
+
+    const ballRadius = 8;
+    const cupRadius = 25;
+    const rampStartY = 450;
+    const rampEndY = 100;
+    const gravity = 600;
+
+    let score = 0;
+    let timeLeft = 60;
+    let gameActive = false;
+    let gameOver = false;
+    let balls = [];
+    let cups = [];
+    let chargeStrength = 0;
+    let isCharging = false;
+    let chargeStart = 0;
+    let ballPreview = null;
+    let lastTime = performance.now();
+    let gameStartTime = null;
+
+    let audioCtx = null;
+    let musicTimer = null;
+    let rhythmStep = 0;
+
+    const melody = [392, 440, 523.25, 440, 392, 349.23, 392, 440];
+    const bass = [130.81, null, 130.81, null, 146.83, null, 123.47, null];
+
+    class Cup {
+      constructor(x, y, score, color) {
+        this.x = x;
+        this.y = y;
+        this.radius = cupRadius;
+        this.score = score;
+        this.color = color;
+      }
+
+      draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 14px Verdana";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(this.score, this.x, this.y);
+      }
+
+      contains(x, y) {
+        const dx = x - this.x;
+        const dy = y - this.y;
+        return Math.sqrt(dx * dx + dy * dy) <= this.radius;
+      }
+    }
+
+    class Ball {
+      constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.radius = ballRadius;
+      }
+
+      update(dt) {
+        this.vy += gravity * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+      }
+
+      draw(ctx) {
+        ctx.fillStyle = "#4f90d5";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      isOutOfBounds() {
+        return this.y > rampStartY + 50 || this.x < 50 || this.x > canvas.width - 50;
+      }
+    }
+
+    function initializeCups() {
+      const cupScores = [100, 200, 300, 500, 750, 1000];
+      const colors = ["#e74c3c", "#3498db", "#2ecc71", "#e91e63", "#f39c12", "#9b59b6"];
+      const startX = canvas.width / 2 - 150;
+      
+      cups = [];
+      for (let i = 0; i < 6; i++) {
+        const x = startX + i * 60;
+        const y = 150;
+        cups.push(new Cup(x, y, cupScores[i], colors[i]));
+      }
+    }
+
+    function ensureAudio() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        statusText.textContent = "Audio is not supported.";
+        return;
+      }
+
+      if (!audioCtx) {
+        audioCtx = new AudioContextClass();
+      }
+
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+
+      if (!musicTimer) {
+        musicTimer = window.setInterval(playMusicStep, 280);
+      }
+
+      statusText.textContent = "Carnival music playing. Go!";
+    }
+
+    function makeBeep(freq, duration, type, gainValue) {
+      if (!audioCtx || !freq) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+
+      gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playMusicStep() {
+      if (!audioCtx || audioCtx.state !== "running") return;
+
+      const tone = melody[rhythmStep % melody.length];
+      const low = bass[rhythmStep % bass.length];
+
+      makeBeep(tone, 0.2, "square", 0.028);
+      if (low) makeBeep(low, 0.22, "triangle", 0.024);
+
+      rhythmStep = (rhythmStep + 1) % melody.length;
+    }
+
+    function playHitSound() {
+      makeBeep(800, 0.08, "sine", 0.12);
+      window.setTimeout(() => makeBeep(600, 0.1, "sine", 0.1), 40);
+    }
+
+    function drawRamp() {
+      ctx.fillStyle = "rgba(139, 69, 19, 0.5)";
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2 - 100, rampStartY);
+      ctx.lineTo(canvas.width / 2 + 100, rampStartY);
+      ctx.lineTo(canvas.width / 2 + 50, rampEndY);
+      ctx.lineTo(canvas.width / 2 - 50, rampEndY);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "#8B6914";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    function drawStallBackdrop() {
+      const gradient = ctx.createLinearGradient(0, rampStartY, 0, canvas.height);
+      gradient.addColorStop(0, "#a8623f");
+      gradient.addColorStop(1, "#5d3821");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, rampStartY, canvas.width, canvas.height - rampStartY);
+
+      ctx.fillStyle = "#fff0d0";
+      ctx.fillRect(0, 0, canvas.width, 86);
+
+      ctx.fillStyle = "#c42b40";
+      for (let i = 0; i < canvas.width; i += 64) {
+        ctx.fillRect(i, 0, 32, 86);
+      }
+    }
+
+    function updateGame(dt) {
+      if (!gameActive || gameOver) return;
+
+      const now = performance.now();
+      timeLeft = Math.max(0, 60 - Math.floor((now - gameStartTime) / 1000));
+      timerEl.textContent = timeLeft;
+
+      if (timeLeft <= 0) {
+        endGame();
+        return;
+      }
+
+      for (const ball of balls) {
+        ball.update(dt);
+
+        if (ball.isOutOfBounds()) {
+          continue;
+        }
+
+        for (const cup of cups) {
+          if (cup.contains(ball.x, ball.y)) {
+            score += cup.score;
+            scoreEl.textContent = String(score);
+            playHitSound();
+            balls = balls.filter(b => b !== ball);
+            break;
+          }
+        }
+      }
+
+      balls = balls.filter(b => !b.isOutOfBounds());
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawStallBackdrop();
+      drawRamp();
+
+      for (const cup of cups) {
+        cup.draw(ctx);
+      }
+
+      for (const ball of balls) {
+        ball.draw(ctx);
+      }
+
+      if (ballPreview) {
+        ctx.fillStyle = "rgba(79, 144, 213, 0.5)";
+        ctx.beginPath();
+        ctx.arc(ballPreview.x, ballPreview.y, ballRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function endGame() {
+      gameActive = false;
+      gameOver = true;
+      if (musicTimer) {
+        window.clearInterval(musicTimer);
+        musicTimer = null;
+      }
+      finalScoreEl.textContent = String(score);
+      gameOverOverlay.classList.add("open");
+    }
+
+    function gameLoop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.033);
+      lastTime = now;
+
+      updateGame(dt);
+      render();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function clientToCanvas(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = ((clientX - rect.left) / rect.width) * canvas.width;
+      const y = ((clientY - rect.top) / rect.height) * canvas.height;
+      return { x, y };
+    }
+
+    function startCharge(clientX, clientY) {
+      if (gameOver || !gameActive) return;
+      isCharging = true;
+      chargeStart = performance.now();
+      updateBallPreview(clientX, clientY);
+      scopeCursor.style.display = "block";
+    }
+
+    function updateBallPreview(clientX, clientY) {
+      const { x, y } = clientToCanvas(clientX, clientY);
+      const centerX = canvas.width / 2;
+      const startY = rampStartY;
+
+      ballPreview = {
+        x: centerX,
+        y: Math.max(rampEndY, Math.min(startY, startY - chargeStrength * 100))
+      };
+
+      scopeCursor.style.left = clientX + "px";
+      scopeCursor.style.top = clientY + "px";
+    }
+
+    function updateCharge(clientX, clientY) {
+      if (!isCharging) return;
+
+      const elapsed = performance.now() - chargeStart;
+      chargeStrength = Math.min(1, elapsed / 1500);
+      const pct = Math.round(chargeStrength * 100);
+      chargeFill.style.width = `${pct}%`;
+      chargeValue.textContent = `${pct}%`;
+
+      updateBallPreview(clientX, clientY);
+    }
+
+    function releaseThrow() {
+      if (!isCharging || gameOver || !gameActive) return;
+
+      isCharging = false;
+      scopeCursor.style.display = "none";
+      ballPreview = null;
+
+      const centerX = canvas.width / 2;
+      const startY = rampStartY;
+
+      const velocity = chargeStrength * 600;
+      const vx = (Math.random() - 0.5) * velocity * 0.5;
+      const vy = -velocity;
+
+      const ball = new Ball(centerX, startY, vx, vy);
+      balls.push(ball);
+
+      chargeStrength = 0;
+      chargeFill.style.width = "0%";
+      chargeValue.textContent = "0%";
+
+      playHitSound();
+    }
+
+    function startGame() {
+      if (gameActive) return;
+      ensureAudio();
+      gameActive = true;
+      gameOver = false;
+      score = 0;
+      timeLeft = 60;
+      balls = [];
+      gameStartTime = performance.now();
+      gameOverOverlay.classList.remove("open");
+      scoreEl.textContent = "0";
+      timerEl.textContent = "60";
+      initializeCups();
+    }
+
+    function resetGame() {
+      if (window.targetSpawnInterval) {
+        window.clearInterval(window.targetSpawnInterval);
+      }
+      gameActive = false;
+      gameOver = false;
+      score = 0;
+      timeLeft = 60;
+      balls = [];
+      chargeStrength = 0;
+      ballPreview = null;
+      isCharging = false;
+      scoreEl.textContent = "0";
+      timerEl.textContent = "60";
+      chargeFill.style.width = "0%";
+      chargeValue.textContent = "0%";
+      gameOverOverlay.classList.remove("open");
+      scopeCursor.style.display = "none";
+    }
+
+    playzone.addEventListener("mouseenter", () => {
+      if (gameActive && !gameOver) {
+        scopeCursor.style.display = "block";
+      }
+    });
+
+    playzone.addEventListener("mouseleave", () => {
+      scopeCursor.style.display = "none";
+      isCharging = false;
+      ballPreview = null;
+    });
+
+    playzone.addEventListener("mousemove", (event) => {
+      scopeCursor.style.left = event.clientX + "px";
+      scopeCursor.style.top = event.clientY + "px";
+      if (isCharging) {
+        updateCharge(event.clientX, event.clientY);
+      }
+    });
+
+    playzone.addEventListener("mousedown", (event) => {
+      if (!gameActive && !gameOver) {
+        startGame();
+      } else if (gameActive && !gameOver) {
+        startCharge(event.clientX, event.clientY);
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      releaseThrow();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      resetGame();
+      startGame();
+    });
+
+    resetGame();
+    initializeCups();
+    render();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
