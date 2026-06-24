@@ -556,7 +556,7 @@
     }
 
     function spawnTarget() {
-      if (gameActive && !gameOver) {
+      if (gameActive && !gameOver && targets.length < 6) {
         targets.push(new Target());
       }
     }
