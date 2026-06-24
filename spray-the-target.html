@@ -122,7 +122,42 @@
       background: #f8fafc;
       user-select: none;
       touch-action: none;
-      cursor: crosshair;
+      cursor: none;
+    }
+
+    .scope-cursor {
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      border: 2px solid rgba(31, 79, 136, 0.7);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .scope-cursor::before {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(31, 79, 136, 0.7);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .scope-cursor::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 12px;
+      background: rgba(31, 79, 136, 0.7);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
 
     canvas {
@@ -239,6 +274,8 @@
     <span></span><span></span><span></span><span></span><span></span>
   </div>
 
+  <div class="scope-cursor" id="scopeCursor"></div>
+
   <main class="app">
     <section class="top">
       <h1 class="title">Spray the Target</h1>
@@ -308,6 +345,16 @@
         this.createdAt = performance.now();
         this.duration = 3000; // 3 seconds
         this.pointValue = Math.floor(Math.random() * 5) + 1; // 1-5 points
+        
+        // Color mapping for points
+        const colors = {
+          1: "#e74c3c",  // Red
+          2: "#3498db",  // Blue
+          3: "#2ecc71",  // Green
+          4: "#e91e63",  // Pink
+          5: "#f39c12"   // Orange
+        };
+        this.color = colors[this.pointValue];
       }
 
       isExpired(now) {
@@ -324,7 +371,7 @@
         
         // Outer circle
         ctx.beginPath();
-        ctx.strokeStyle = "#d62939";
+        ctx.strokeStyle = this.color;
         ctx.lineWidth = 4;
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.stroke();
@@ -337,14 +384,15 @@
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.fillStyle = "#d62939";
+        ctx.fillStyle = this.color;
         ctx.arc(this.x, this.y, this.radius * 0.3, 0, Math.PI * 2);
         ctx.fill();
 
         // Fade out effect near end of life
         if (progress > 0.7) {
           ctx.globalAlpha = 1 - (progress - 0.7) / 0.3;
-          ctx.fillStyle = "rgba(214, 41, 57, 0.2)";
+          ctx.fillStyle = this.color + "33";
+          ctx.beginPath();
           ctx.arc(this.x, this.y, this.radius * 1.2, 0, Math.PI * 2);
           ctx.fill();
           ctx.globalAlpha = 1;
@@ -360,10 +408,11 @@
     }
 
     class Splash {
-      constructor(x, y, points) {
+      constructor(x, y, points, color) {
         this.x = x;
         this.y = y;
         this.points = points;
+        this.color = color;
         this.createdAt = performance.now();
         this.duration = 500; // 0.5 second animation
       }
@@ -383,7 +432,7 @@
 
         // Colored splash circles
         ctx.globalAlpha = opacity * 0.8;
-        ctx.fillStyle = "#d62939";
+        ctx.fillStyle = this.color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
         ctx.fill();
@@ -591,8 +640,8 @@
       // Spawn first target immediately
       spawnTarget();
 
-      // Then spawn a new target every 3 seconds
-      window.targetSpawnInterval = window.setInterval(spawnTarget, 3000);
+      // Then spawn a new target every 1.2 seconds for faster pace
+      window.targetSpawnInterval = window.setInterval(spawnTarget, 1200);
     }
 
     function resetGame() {
@@ -609,6 +658,21 @@
       timerEl.textContent = "45";
       gameOverOverlay.classList.remove("open");
     }
+
+    const scopeCursor = document.getElementById("scopeCursor");
+
+    playzone.addEventListener("mouseenter", () => {
+      scopeCursor.style.display = "block";
+    });
+
+    playzone.addEventListener("mouseleave", () => {
+      scopeCursor.style.display = "none";
+    });
+
+    playzone.addEventListener("mousemove", (event) => {
+      scopeCursor.style.left = event.clientX + "px";
+      scopeCursor.style.top = event.clientY + "px";
+    });
 
     playzone.addEventListener("click", (event) => {
       if (!gameActive && !gameOver) {
@@ -631,7 +695,7 @@
           // Hit!
           score += target.pointValue;
           scoreEl.textContent = String(score);
-          splashes.push(new Splash(target.x, target.y, target.pointValue));
+          splashes.push(new Splash(target.x, target.y, target.pointValue, target.color));
           targets.splice(i, 1);
           playHitSound();
           break;
