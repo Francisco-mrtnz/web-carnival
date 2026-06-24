@@ -631,22 +631,27 @@
 
     function updatePhysics(dt) {
       for (const ball of balls) {
-        ball.vz += gravity * 0.5 * dt; // Forward velocity increases
+        // Move ball along z-axis at constant speed
+        ball.z += ball.vz * dt;
+        
+        // Apply gravity to vertical velocity
+        ball.vy += gravity * dt;
+        
+        // Update x and y positions
         ball.x += ball.vx * dt;
         ball.y += ball.vy * dt;
-        ball.z += ball.vz * dt;
 
-        // Ground collision (limit downward movement)
-        const screenY = groundY - (ball.z / maxZ) * (groundY - 100);
-        if (screenY + (ballRadius * (1 - ball.z / maxZ)) >= groundY) {
-          ball.vz *= 0.6;
-          ball.vy *= -0.4;
-          ball.vx *= 0.8;
+        // Stop if below ground
+        if (ball.y >= groundY) {
+          ball.y = groundY;
+          ball.vy = 0;
+          ball.vx *= 0.92;
+          ball.vz *= 0.92;
         }
       }
 
       // Filter balls that have passed through the cans or gone out of bounds
-      balls = balls.filter((ball) => ball.x > -80 && ball.x < canvas.width + 80 && ball.z < maxZ + 100);
+      balls = balls.filter((ball) => ball.z < maxZ + 100);
 
       for (const can of cans) {
         if (can.knocked) {
@@ -659,7 +664,8 @@
           
           const screenY = groundY - (can.z / maxZ) * (groundY - 100);
           const sizeScale = Math.max(0.3, 1 - (can.z / maxZ) * 0.7);
-          if (screenY + can.h * sizeScale >= groundY) {
+          if (can.y >= groundY) {
+            can.y = groundY;
             can.vy *= -0.2;
             if (Math.abs(can.vy) < 20) {
               can.vy = 0;
@@ -673,20 +679,19 @@
           const ballRadius3D = ballRadius * Math.max(0.2, 1 - (ball.z / maxZ) * 0.8);
           const canSizeScale = Math.max(0.3, 1 - (can.z / maxZ) * 0.7);
           const canW3D = can.w * canSizeScale;
-          const canH3D = can.h * canSizeScale;
           
-          // Check if z-values are close
+          // Check if z-values are close (within collision range)
           const zDiff = Math.abs(ball.z - can.z);
-          if (zDiff < 50) {
+          if (zDiff < 80) {
             const nearestX = Math.max(can.x, Math.min(ball.x, can.x + canW3D));
             const dx = ball.x - nearestX;
             if (dx * dx <= ballRadius3D * ballRadius3D) {
               can.knocked = true;
-              can.vx = ball.vx * 0.3;
-              can.vz = ball.vz * 0.5 + 50;
-              can.vy = -80;
-              ball.vx *= 0.5;
-              ball.vz *= 0.6;
+              can.vx = ball.vx * 0.4;
+              can.vz = ball.vz * 0.3;
+              can.vy = -100;
+              ball.vx *= 0.3;
+              ball.vy *= -0.3;
               if (!can.scored) {
                 can.scored = true;
                 score += can.value;
@@ -794,37 +799,51 @@
       sideChargeBar.style.display = 'none';
       const throwPower = Math.max(0.1, chargeStrength);
       
-      // Ball starts from center of screen
+      // Ball starts from center of screen, elevated
       const originX = canvas.width / 2;
-      const originY = groundY - ballRadius;
+      const originY = groundY - 60; // Start elevated above ground
       const originZ = playerZ;
       
-      // Calculate direction towards mouse position
-      // Map mouse position to a target at max depth
+      // Calculate direction based on mouse position relative to center
       const centerX = canvas.width / 2;
-      const centerY = groundY;
+      const centerY = groundY - 100; // Aim point is above ground level
       const dx = lastPointer.x - centerX;
       const dy = lastPointer.y - centerY;
       
-      // Horizontal spread based on mouse position
-      const horizontalAngle = Math.atan2(dx, maxZ);
-      const verticalAngle = Math.atan2(-dy, maxZ); // Negative because up should be negative angle
+      // Base forward velocity (toward cans) - faster with more power
+      const baseVz = 300 + throwPower * 500;
+      
+      // Time to reach the cans
+      const timeToReachCans = maxZ / baseVz;
+      
+      // Calculate horizontal velocity based on mouse offset and throw power
+      const horizontalRange = (dx / (canvas.width * 0.4)) * 200; // Max ±200 pixels horizontal range
+      const vx = horizontalRange / timeToReachCans;
+      
+      // Calculate vertical velocity - higher charge = higher arc
+      // The parabolic arc peaks at around 40% of the time to reach cans
+      const maxHeight = 150 + throwPower * 200; // How high the arc reaches
+      // Using parabolic motion: at peak time (40% of total), vy = 0
+      // Peak height: h = vy*t_peak - 0.5*g*t_peak^2
+      // We solve for vy given the desired peak height and peak time
+      const peakTime = timeToReachCans * 0.5; // Peak at halfway
+      const vy = (maxHeight + 0.5 * gravity * peakTime * peakTime) / peakTime;
       
       // Add inaccuracy based on charge strength
-      const maxSpread = (Math.PI / 8); // 22.5 degrees
-      const spreadFactor = 1 - throwPower; // Higher power = less spread
-      const hSpread = (Math.random() - 0.5) * 2 * maxSpread * spreadFactor;
-      const vSpread = (Math.random() - 0.5) * 2 * maxSpread * spreadFactor;
-      
-      const baseSpeed = 400 + throwPower * 800;
+      const maxSpread = 0.08; // Max spread in velocity
+      const spreadFactor = 1 - throwPower;
+      const vxSpread = (Math.random() - 0.5) * 2 * maxSpread * spreadFactor;
+      const vySpread = (Math.random() - 0.5) * 2 * maxSpread * spreadFactor;
       
       const ball = {
-        x: originX + Math.tan(horizontalAngle + hSpread) * 100,
-        y: originY + Math.tan(verticalAngle + vSpread) * 100,
+        x: originX,
+        y: originY,
         z: originZ,
-        vx: Math.sin(horizontalAngle + hSpread) * baseSpeed * 0.5,
-        vy: Math.sin(verticalAngle + vSpread) * baseSpeed * 0.3,
-        vz: Math.cos(horizontalAngle) * Math.cos(verticalAngle) * baseSpeed
+        vx: vx + vxSpread * 50,
+        vy: vy + vySpread * 50,
+        vz: baseVz,
+        startZ: originZ,
+        maxZ: maxZ
       };
 
       balls.push(ball);
