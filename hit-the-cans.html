@@ -800,41 +800,32 @@
       const originY = canvas.height / 2;
       const originZ = playerZ;
       
-      // Calculate aim based on mouse offset from center
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const offsetX = lastPointer.x - centerX;
-      const offsetY = lastPointer.y - centerY;
-      
       // Forward velocity (toward cans) - higher with more power
       const baseVz = 250 + throwPower * 450;
       
       // Time to reach cans
       const timeToReachCans = maxZ / baseVz;
       
-      // Horizontal and vertical spread based on mouse offset
-      // Normalize offsets to range [-1, 1] based on screen size
-      const maxOffsetX = canvas.width * 0.3;
-      const maxOffsetY = canvas.height * 0.3;
-      const normalizedOffsetX = Math.max(-1, Math.min(1, offsetX / maxOffsetX));
-      const normalizedOffsetY = Math.max(-1, Math.min(1, offsetY / maxOffsetY));
+      // Ball should travel to where the cursor is pointing at can depth
+      // Calculate required velocities to reach cursor position at can depth
+      const cursorX = lastPointer.x;
+      const cursorY = lastPointer.y;
       
-      // Calculate velocities to reach target offset at can depth
-      const vx = (normalizedOffsetX * 150) / timeToReachCans;
+      // Horizontal velocity - travel from center to cursor horizontal position
+      const vx = (cursorX - originX) / timeToReachCans;
       
-      // Vertical velocity - natural gravity arc
-      // The ball should follow a parabolic path and land roughly where aimed
-      // At can distance, we want to be at targetY
+      // Vertical velocity - accounting for gravity
       // y = y0 + vy*t - 0.5*g*t^2
-      // Solve for vy given desired landing position
-      const targetY = originY + (normalizedOffsetY * 100);
-      const vy = ((targetY - originY) + 0.5 * gravity * timeToReachCans * timeToReachCans) / timeToReachCans;
+      // We want: cursorY = originY + vy*t - 0.5*g*t^2
+      // Solve for vy: vy = (cursorY - originY + 0.5*g*t^2) / t
+      const vy = ((cursorY - originY) + 0.5 * gravity * timeToReachCans * timeToReachCans) / timeToReachCans;
       
       // Add inaccuracy based on charge strength
-      const maxSpread = 0.12;
+      const maxSpreadX = 30;
+      const maxSpreadY = 20;
       const spreadFactor = 1 - throwPower;
-      const vxNoise = (Math.random() - 0.5) * 2 * maxSpread * 100 * spreadFactor;
-      const vyNoise = (Math.random() - 0.5) * 2 * maxSpread * 50 * spreadFactor;
+      const vxNoise = (Math.random() - 0.5) * 2 * maxSpreadX * spreadFactor;
+      const vyNoise = (Math.random() - 0.5) * 2 * maxSpreadY * spreadFactor;
       
       const ball = {
         x: originX,
