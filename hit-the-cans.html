@@ -395,6 +395,8 @@
     const canH = 30;
     const ballRadius = 12;
     const gravity = 820;
+    const maxZ = 500; // Maximum depth (where cans are)
+    const playerZ = 0; // Player position (front of booth)
 
     let score = 0;
     let throwsLeft = 5;
@@ -487,10 +489,12 @@
         stack.push({
           x: centerX - canW / 2,
           y: stackBaseY - (i + 1) * canH,
+          z: maxZ,
           w: canW,
           h: canH,
           vx: 0,
           vy: 0,
+          vz: 0,
           knocked: false,
           scored: false,
           value: i === tenPointLevel ? 10 : 5
@@ -527,20 +531,43 @@
     }
 
     function drawStallBackdrop() {
-      ctx.fillStyle = "#9b4f37";
+      // 3D booth floor - gradient from front to back
+      const gradient = ctx.createLinearGradient(0, groundY, 0, canvas.height);
+      gradient.addColorStop(0, "#a8623f");
+      gradient.addColorStop(1, "#5d3821");
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
 
-      ctx.fillStyle = "rgba(255,255,255,0.2)";
-      for (let i = 0; i < canvas.width; i += 34) {
-        ctx.fillRect(i, 110, 16, 220);
+      // Side walls with perspective
+      ctx.fillStyle = "rgba(139, 69, 19, 0.3)";
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(canvas.width * 0.15, groundY * 0.3);
+      ctx.lineTo(canvas.width * 0.15, canvas.height);
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.moveTo(canvas.width, groundY);
+      ctx.lineTo(canvas.width, 0);
+      ctx.lineTo(canvas.width * 0.85, groundY * 0.3);
+      ctx.lineTo(canvas.width * 0.85, canvas.height);
+      ctx.fill();
+
+      // Depth lines for perspective
+      ctx.strokeStyle = "rgba(255,255,255,0.1)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        const y = groundY + (canvas.height - groundY) * (i / 4);
+        const x1 = canvas.width * 0.15;
+        const x2 = canvas.width * 0.85;
+        ctx.beginPath();
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y);
+        ctx.stroke();
       }
 
-      ctx.fillStyle = "#f7e3bf";
-      ctx.fillRect(0, 320, canvas.width, 18);
-
-      ctx.fillStyle = "#713726";
-      ctx.fillRect(0, 338, canvas.width, 20);
-
+      // Top booth frame
       ctx.fillStyle = "#fff0d0";
       ctx.fillRect(0, 0, canvas.width, 86);
 
@@ -551,67 +578,89 @@
     }
 
     function drawCan(can) {
-      const x = can.x;
-      const y = can.y;
+      // Calculate size based on depth
+      const sizeScale = Math.max(0.3, 1 - (can.z / maxZ) * 0.7);
+      const w = can.w * sizeScale;
+      const h = can.h * sizeScale;
+      
+      // Calculate screen position based on depth
+      const screenY = groundY - (can.z / maxZ) * (groundY - 100);
+      const x = can.x - (can.w - w) / 2;
+      const y = screenY - h / 2;
+      
       ctx.fillStyle = can.value === 10 ? "#ffd34e" : "#d7e5f7";
-      ctx.fillRect(x, y, can.w, can.h);
+      ctx.fillRect(x, y, w, h);
 
       ctx.strokeStyle = "#2f5d95";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, can.w, can.h);
+      ctx.lineWidth = Math.max(1, 2 * sizeScale);
+      ctx.strokeRect(x, y, w, h);
 
       ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.fillRect(x + 5, y + 5, can.w - 10, 6);
+      ctx.fillRect(x + 3 * sizeScale, y + 3 * sizeScale, w - 6 * sizeScale, 4 * sizeScale);
 
       ctx.fillStyle = "#2c2a43";
-      ctx.font = "bold 13px Verdana";
+      ctx.font = `bold ${Math.max(8, 13 * sizeScale)}px Verdana`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(String(can.value), x + can.w / 2, y + can.h / 2);
+      ctx.fillText(String(can.value), x + w / 2, y + h / 2);
     }
 
     function drawBall(ball) {
+      // Calculate size based on depth (z-coordinate)
+      // At z=0 (front): full size
+      // At z=maxZ (back): very small
+      const sizeScale = Math.max(0.2, 1 - (ball.z / maxZ) * 0.8);
+      const radius = ballRadius * sizeScale;
+      
+      // Calculate screen y position based on depth
+      const screenY = groundY - (ball.z / maxZ) * (groundY - 100);
+      
       ctx.beginPath();
       ctx.fillStyle = "#4f90d5";
-      ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+      ctx.arc(ball.x, screenY, radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.closePath();
 
       ctx.beginPath();
       ctx.strokeStyle = "rgba(255,255,255,0.65)";
-      ctx.lineWidth = 2;
-      ctx.arc(ball.x - 2, ball.y - 2, ballRadius - 4, 0, Math.PI * 2);
+      ctx.lineWidth = Math.max(1, 2 * sizeScale);
+      ctx.arc(ball.x - 2, screenY - 2, Math.max(0.5, radius - 4), 0, Math.PI * 2);
       ctx.stroke();
       ctx.closePath();
     }
 
     function updatePhysics(dt) {
       for (const ball of balls) {
-        ball.vy += gravity * dt;
+        ball.vz += gravity * 0.5 * dt; // Forward velocity increases
         ball.x += ball.vx * dt;
         ball.y += ball.vy * dt;
+        ball.z += ball.vz * dt;
 
-        if (ball.y + ballRadius >= groundY) {
-          ball.y = groundY - ballRadius;
-          ball.vy *= -0.35;
-          ball.vx *= 0.86;
-          if (Math.abs(ball.vy) < 30) {
-            ball.vy = 0;
-          }
+        // Ground collision (limit downward movement)
+        const screenY = groundY - (ball.z / maxZ) * (groundY - 100);
+        if (screenY + (ballRadius * (1 - ball.z / maxZ)) >= groundY) {
+          ball.vz *= 0.6;
+          ball.vy *= -0.4;
+          ball.vx *= 0.8;
         }
       }
 
-      balls = balls.filter((ball) => ball.x > -40 && ball.x < canvas.width + 40 && ball.y < canvas.height + 60);
+      // Filter balls that have passed through the cans or gone out of bounds
+      balls = balls.filter((ball) => ball.x > -80 && ball.x < canvas.width + 80 && ball.z < maxZ + 100);
 
       for (const can of cans) {
         if (can.knocked) {
           can.vy += gravity * dt;
+          can.vx *= 0.92;
+          can.vz *= 0.92;
           can.x += can.vx * dt;
           can.y += can.vy * dt;
-          if (can.y + can.h >= groundY) {
-            can.y = groundY - can.h;
+          can.z += can.vz * dt;
+          
+          const screenY = groundY - (can.z / maxZ) * (groundY - 100);
+          const sizeScale = Math.max(0.3, 1 - (can.z / maxZ) * 0.7);
+          if (screenY + can.h * sizeScale >= groundY) {
             can.vy *= -0.2;
-            can.vx *= 0.84;
             if (Math.abs(can.vy) < 20) {
               can.vy = 0;
             }
@@ -620,23 +669,32 @@
         }
 
         for (const ball of balls) {
-          const nearestX = Math.max(can.x, Math.min(ball.x, can.x + can.w));
-          const nearestY = Math.max(can.y, Math.min(ball.y, can.y + can.h));
-          const dx = ball.x - nearestX;
-          const dy = ball.y - nearestY;
-          if (dx * dx + dy * dy <= ballRadius * ballRadius) {
-            can.knocked = true;
-            can.vx = ball.vx * 0.35 + (ball.x - (can.x + can.w / 2)) * 3;
-            can.vy = Math.min(-120, ball.vy * 0.35 - 120);
-            ball.vx *= 0.65;
-            ball.vy *= -0.25;
-            if (!can.scored) {
-              can.scored = true;
-              score += can.value;
-              updateHud();
+          // 3D collision detection
+          const ballRadius3D = ballRadius * Math.max(0.2, 1 - (ball.z / maxZ) * 0.8);
+          const canSizeScale = Math.max(0.3, 1 - (can.z / maxZ) * 0.7);
+          const canW3D = can.w * canSizeScale;
+          const canH3D = can.h * canSizeScale;
+          
+          // Check if z-values are close
+          const zDiff = Math.abs(ball.z - can.z);
+          if (zDiff < 50) {
+            const nearestX = Math.max(can.x, Math.min(ball.x, can.x + canW3D));
+            const dx = ball.x - nearestX;
+            if (dx * dx <= ballRadius3D * ballRadius3D) {
+              can.knocked = true;
+              can.vx = ball.vx * 0.3;
+              can.vz = ball.vz * 0.5 + 50;
+              can.vy = -80;
+              ball.vx *= 0.5;
+              ball.vz *= 0.6;
+              if (!can.scored) {
+                can.scored = true;
+                score += can.value;
+                updateHud();
+              }
+              playHitSound();
+              break;
             }
-            playHitSound();
-            break;
           }
         }
       }
@@ -735,30 +793,38 @@
       scopeCursor.style.display = 'none';
       sideChargeBar.style.display = 'none';
       const throwPower = Math.max(0.1, chargeStrength);
-      const originX = 120;
+      
+      // Ball starts from center of screen
+      const originX = canvas.width / 2;
       const originY = groundY - ballRadius;
-      const dx = lastPointer.x - originX;
-      const dy = lastPointer.y - originY;
-      const len = Math.max(1, Math.hypot(dx, dy));
+      const originZ = playerZ;
       
-      // Calculate base angle towards cursor
-      let angle = Math.atan2(dy, dx);
+      // Calculate direction towards mouse position
+      // Map mouse position to a target at max depth
+      const centerX = canvas.width / 2;
+      const centerY = groundY;
+      const dx = lastPointer.x - centerX;
+      const dy = lastPointer.y - centerY;
       
-      // Add inaccuracy based on charge strength (weaker = less accurate)
-      // At 0% charge: up to ±30 degrees of spread
-      // At 100% charge: ±0 degrees (perfect aim)
-      const maxSpreadAngle = (Math.PI / 6); // 30 degrees in radians
+      // Horizontal spread based on mouse position
+      const horizontalAngle = Math.atan2(dx, maxZ);
+      const verticalAngle = Math.atan2(-dy, maxZ); // Negative because up should be negative angle
+      
+      // Add inaccuracy based on charge strength
+      const maxSpread = (Math.PI / 8); // 22.5 degrees
       const spreadFactor = 1 - throwPower; // Higher power = less spread
-      const spread = (Math.random() - 0.5) * 2 * maxSpreadAngle * spreadFactor;
-      angle += spread;
+      const hSpread = (Math.random() - 0.5) * 2 * maxSpread * spreadFactor;
+      const vSpread = (Math.random() - 0.5) * 2 * maxSpread * spreadFactor;
       
-      const speed = 260 + throwPower * 620;
-
+      const baseSpeed = 400 + throwPower * 800;
+      
       const ball = {
-        x: originX,
-        y: originY,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed
+        x: originX + Math.tan(horizontalAngle + hSpread) * 100,
+        y: originY + Math.tan(verticalAngle + vSpread) * 100,
+        z: originZ,
+        vx: Math.sin(horizontalAngle + hSpread) * baseSpeed * 0.5,
+        vy: Math.sin(verticalAngle + vSpread) * baseSpeed * 0.3,
+        vz: Math.cos(horizontalAngle) * Math.cos(verticalAngle) * baseSpeed
       };
 
       balls.push(ball);
