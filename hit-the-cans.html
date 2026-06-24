@@ -20,8 +20,7 @@
       box-sizing: border-box;
     }
 
-    html,
-    body {
+    html, body {
       min-height: 100%;
     }
 
@@ -132,6 +131,16 @@
       width: 100%;
       height: auto;
       background: linear-gradient(180deg, #ffd89f 0%, #ffbd78 42%, #d26848 100%);
+      animation: canvas-throw 0s;
+    }
+
+    @keyframes canvas-throw {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    canvas.ball-throw {
+      animation: canvas-throw 0.3s ease-out;
     }
 
     .charge-wrap {
@@ -167,67 +176,6 @@
       color: #433a61;
       font-size: 0.95rem;
       font-weight: 700;
-    }
-
-    .scope-cursor {
-      position: fixed;
-      width: 40px;
-      height: 40px;
-      border: 2px solid rgba(31, 79, 136, 0.7);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 1000;
-      display: none;
-      transform: translate(-50%, -50%);
-    }
-
-    .scope-cursor::before {
-      content: '';
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      background: rgba(31, 79, 136, 0.7);
-      border-radius: 50%;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-
-    .scope-cursor::after {
-      content: '';
-      position: absolute;
-      width: 2px;
-      height: 12px;
-      background: rgba(31, 79, 136, 0.7);
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-
-    .side-charge-bar {
-      position: fixed;
-      width: 20px;
-      height: 80px;
-      background: rgba(216, 230, 247, 0.9);
-      border: 2px solid rgba(47, 109, 178, 0.5);
-      border-radius: 4px;
-      pointer-events: none;
-      z-index: 1000;
-      display: none;
-      transform: translateX(-100%);
-      margin-left: -10px;
-      overflow: hidden;
-    }
-
-    .side-charge-bar::before {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 0%;
-      background: linear-gradient(180deg, #49a6ff, #2f6db2);
-      transition: height 60ms linear;
     }
 
     .actions {
@@ -312,6 +260,67 @@
       display: inline-block;
     }
 
+    .scope-cursor {
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      border: 2px solid rgba(31, 79, 136, 0.7);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .scope-cursor::before {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(31, 79, 136, 0.7);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .scope-cursor::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 12px;
+      background: rgba(31, 79, 136, 0.7);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .side-charge-bar {
+      position: fixed;
+      width: 20px;
+      height: 80px;
+      background: rgba(216, 230, 247, 0.9);
+      border: 2px solid rgba(47, 109, 178, 0.5);
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+      transform: translateX(-100%);
+      margin-left: -10px;
+      overflow: hidden;
+    }
+
+    .side-charge-bar::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(180deg, #49a6ff, #2f6db2);
+      transition: height 60ms linear;
+    }
+
     @media (max-width: 760px) {
       .app {
         padding: 14px;
@@ -390,13 +399,12 @@
     const sideChargeBar = document.getElementById("sideChargeBar");
 
     const groundY = 430;
-    const stackBaseY = 390;
     const canW = 44;
     const canH = 30;
     const ballRadius = 12;
-    const gravity = 820;
-    const maxZ = 500; // Maximum depth (where cans are)
-    const playerZ = 0; // Player position (front of booth)
+    const gravity = 500;
+    const maxZ = 600;
+    const playerZ = 0;
 
     let score = 0;
     let throwsLeft = 5;
@@ -405,7 +413,7 @@
     let isCharging = false;
     let chargeStrength = 0;
     let chargeStart = 0;
-    let lastPointer = { x: canvas.width / 2, y: 140 };
+    let lastPointer = { x: canvas.width / 2, y: canvas.height / 2 };
     let gameOver = false;
     let lastTime = performance.now();
 
@@ -419,7 +427,7 @@
     function ensureAudio() {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) {
-        statusText.textContent = "Audio is not supported in this browser.";
+        statusText.textContent = "Audio is not supported.";
         return;
       }
 
@@ -439,9 +447,7 @@
     }
 
     function makeBeep(freq, duration, type, gainValue) {
-      if (!audioCtx || !freq) {
-        return;
-      }
+      if (!audioCtx || !freq) return;
 
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -458,17 +464,13 @@
     }
 
     function playMusicStep() {
-      if (!audioCtx || audioCtx.state !== "running") {
-        return;
-      }
+      if (!audioCtx || audioCtx.state !== "running") return;
 
       const tone = melody[rhythmStep % melody.length];
       const low = bass[rhythmStep % bass.length];
 
       makeBeep(tone, 0.2, "square", 0.028);
-      if (low) {
-        makeBeep(low, 0.22, "triangle", 0.024);
-      }
+      if (low) makeBeep(low, 0.22, "triangle", 0.024);
 
       rhythmStep = (rhythmStep + 1) % melody.length;
     }
@@ -483,12 +485,12 @@
       window.setTimeout(() => makeBeep(580, 0.08, "sine", 0.06), 30);
     }
 
-    function createStack(centerX, levels, tenPointLevel) {
+    function createStack(centerX, levels) {
       const stack = [];
       for (let i = 0; i < levels; i += 1) {
         stack.push({
           x: centerX - canW / 2,
-          y: stackBaseY - (i + 1) * canH,
+          y: groundY - (i + 1) * canH,
           z: maxZ,
           w: canW,
           h: canH,
@@ -497,7 +499,7 @@
           vz: 0,
           knocked: false,
           scored: false,
-          value: i === tenPointLevel ? 10 : 5
+          value: 5
         });
       }
       return stack;
@@ -517,9 +519,9 @@
       sideChargeBar.style.display = 'none';
 
       cans = [
-        ...createStack(300, 3, -1),
-        ...createStack(460, 5, 2),
-        ...createStack(620, 3, -1)
+        ...createStack(200, 5),
+        ...createStack(460, 7),
+        ...createStack(720, 5)
       ];
 
       updateHud();
@@ -531,14 +533,12 @@
     }
 
     function drawStallBackdrop() {
-      // 3D booth floor - gradient from front to back
       const gradient = ctx.createLinearGradient(0, groundY, 0, canvas.height);
       gradient.addColorStop(0, "#a8623f");
       gradient.addColorStop(1, "#5d3821");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
 
-      // Side walls with perspective
       ctx.fillStyle = "rgba(139, 69, 19, 0.3)";
       ctx.beginPath();
       ctx.moveTo(0, groundY);
@@ -554,7 +554,6 @@
       ctx.lineTo(canvas.width * 0.85, canvas.height);
       ctx.fill();
 
-      // Depth lines for perspective
       ctx.strokeStyle = "rgba(255,255,255,0.1)";
       ctx.lineWidth = 1;
       for (let i = 0; i < 5; i++) {
@@ -567,7 +566,6 @@
         ctx.stroke();
       }
 
-      // Top booth frame
       ctx.fillStyle = "#fff0d0";
       ctx.fillRect(0, 0, canvas.width, 86);
 
@@ -578,16 +576,14 @@
     }
 
     function drawCan(can) {
-      // Calculate size based on depth
       const sizeScale = Math.max(0.3, 1 - (can.z / maxZ) * 0.7);
       const w = can.w * sizeScale;
       const h = can.h * sizeScale;
       
-      // Keep original Y position (cans on flat ground), center scaled size on original position
       const x = can.x - (can.w - w) / 2;
       const y = can.y - (can.h - h) / 2;
       
-      ctx.fillStyle = can.value === 10 ? "#ffd34e" : "#d7e5f7";
+      ctx.fillStyle = "#d7e5f7";
       ctx.fillRect(x, y, w, h);
 
       ctx.strokeStyle = "#2f5d95";
@@ -601,14 +597,11 @@
       ctx.font = `bold ${Math.max(8, 13 * sizeScale)}px Verdana`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(String(can.value), x + w / 2, y + h / 2);
+      ctx.fillText("5", x + w / 2, y + h / 2);
     }
 
     function drawBall(ball) {
-      // Calculate size based on depth (z-coordinate)
-      // At z=0 (front): full size
-      // At z=maxZ (back): very small
-      const sizeScale = Math.max(0.2, 1 - (ball.z / maxZ) * 0.8);
+      const sizeScale = Math.max(0.1, 1 - (ball.z / maxZ) * 0.85);
       const radius = ballRadius * sizeScale;
       
       ctx.beginPath();
@@ -627,39 +620,30 @@
 
     function updatePhysics(dt) {
       for (const ball of balls) {
-        // Move ball along z-axis at constant speed
-        ball.z += ball.vz * dt;
-        
-        // Apply gravity to vertical velocity
         ball.vy += gravity * dt;
-        
-        // Update x and y positions
         ball.x += ball.vx * dt;
         ball.y += ball.vy * dt;
+        ball.z += ball.vz * dt;
 
-        // Stop if below ground
         if (ball.y >= groundY) {
           ball.y = groundY;
-          ball.vy = 0;
-          ball.vx *= 0.92;
-          ball.vz *= 0.92;
+          ball.vy *= -0.3;
+          ball.vx *= 0.85;
+          ball.vz *= 0.85;
         }
       }
 
-      // Filter balls that have passed through the cans or gone out of bounds
-      balls = balls.filter((ball) => ball.z < maxZ + 100);
+      balls = balls.filter((ball) => ball.z < maxZ + 150);
 
       for (const can of cans) {
         if (can.knocked) {
           can.vy += gravity * dt;
-          can.vx *= 0.92;
-          can.vz *= 0.92;
+          can.vx *= 0.9;
+          can.vz *= 0.9;
           can.x += can.vx * dt;
           can.y += can.vy * dt;
           can.z += can.vz * dt;
           
-          const screenY = groundY - (can.z / maxZ) * (groundY - 100);
-          const sizeScale = Math.max(0.3, 1 - (can.z / maxZ) * 0.7);
           if (can.y >= groundY) {
             can.y = groundY;
             can.vy *= -0.2;
@@ -671,23 +655,25 @@
         }
 
         for (const ball of balls) {
-          // 3D collision detection
-          const ballRadius3D = ballRadius * Math.max(0.2, 1 - (ball.z / maxZ) * 0.8);
+          const ballRadius3D = ballRadius * Math.max(0.1, 1 - (ball.z / maxZ) * 0.85);
           const canSizeScale = Math.max(0.3, 1 - (can.z / maxZ) * 0.7);
           const canW3D = can.w * canSizeScale;
           
-          // Check if z-values are close (within collision range)
           const zDiff = Math.abs(ball.z - can.z);
-          if (zDiff < 80) {
+          if (zDiff < 100) {
             const nearestX = Math.max(can.x, Math.min(ball.x, can.x + canW3D));
             const dx = ball.x - nearestX;
-            if (dx * dx <= ballRadius3D * ballRadius3D) {
+            const nearestY = Math.max(can.y, Math.min(ball.y, can.y + can.h));
+            const dy = ball.y - nearestY;
+            
+            if (dx * dx + dy * dy <= ballRadius3D * ballRadius3D) {
               can.knocked = true;
               can.vx = ball.vx * 0.4;
-              can.vz = ball.vz * 0.3;
-              can.vy = -100;
-              ball.vx *= 0.3;
-              ball.vy *= -0.3;
+              can.vz = 100 + ball.vz * 0.2;
+              can.vy = -120;
+              ball.vx *= 0.2;
+              ball.vy *= -0.2;
+              ball.vz *= 0.7;
               if (!can.scored) {
                 can.scored = true;
                 score += can.value;
@@ -739,9 +725,7 @@
     }
 
     function startCharge(clientX, clientY) {
-      if (gameOver || throwsLeft <= 0) {
-        return;
-      }
+      if (gameOver || throwsLeft <= 0) return;
       ensureAudio();
       isCharging = true;
       chargeStart = performance.now();
@@ -755,9 +739,7 @@
     }
 
     function updateCharge(clientX, clientY) {
-      if (!isCharging) {
-        return;
-      }
+      if (!isCharging) return;
       lastPointer = clientToCanvas(clientX, clientY);
       const elapsed = performance.now() - chargeStart;
       chargeStrength = Math.min(1, elapsed / 1400);
@@ -765,19 +747,11 @@
       chargeFill.style.width = `${pct}%`;
       chargeValue.textContent = `${pct}%`;
       
-      // Update scope cursor and side charge bar positions
       scopeCursor.style.left = clientX + 'px';
       scopeCursor.style.top = clientY + 'px';
       sideChargeBar.style.left = clientX + 'px';
       sideChargeBar.style.top = clientY + 'px';
       
-      // Update the fill height of the side charge bar
-      const barFill = sideChargeBar.querySelector('::before') || sideChargeBar;
-      sideChargeBar.style.setProperty('--charge-height', `${pct}%`);
-      // Update the pseudo-element height directly through CSS
-      const style = document.createElement('style');
-      style.textContent = `.side-charge-bar::before { height: ${pct}% !important; }`;
-      // Instead, update through inline style property
       if (!window.chargeFillStyle) {
         window.chargeFillStyle = document.createElement('style');
         document.head.appendChild(window.chargeFillStyle);
@@ -786,46 +760,38 @@
     }
 
     function releaseThrow() {
-      if (!isCharging || gameOver || throwsLeft <= 0) {
-        return;
-      }
+      if (!isCharging || gameOver || throwsLeft <= 0) return;
 
       isCharging = false;
       scopeCursor.style.display = 'none';
       sideChargeBar.style.display = 'none';
+      
       const throwPower = Math.max(0.1, chargeStrength);
       
-      // Ball starts from center of screen
       const originX = canvas.width / 2;
       const originY = canvas.height / 2;
       const originZ = playerZ;
       
-      // Forward velocity (toward cans) - higher with more power
-      const baseVz = 250 + throwPower * 450;
-      
-      // Time to reach cans
-      const timeToReachCans = maxZ / baseVz;
-      
-      // Ball should travel to where the cursor is pointing at can depth
-      // Calculate required velocities to reach cursor position at can depth
       const cursorX = lastPointer.x;
       const cursorY = lastPointer.y;
       
-      // Horizontal velocity - travel from center to cursor horizontal position
-      const vx = (cursorX - originX) / timeToReachCans;
+      const dx = cursorX - originX;
+      const dy = cursorY - originY;
+      const distance = Math.sqrt(dx * dx + dy * dy) || 1;
       
-      // Vertical velocity - accounting for gravity
-      // y = y0 + vy*t - 0.5*g*t^2
-      // We want: cursorY = originY + vy*t - 0.5*g*t^2
-      // Solve for vy: vy = (cursorY - originY + 0.5*g*t^2) / t
-      const vy = ((cursorY - originY) + 0.5 * gravity * timeToReachCans * timeToReachCans) / timeToReachCans;
+      const baseSpeed = 400 + throwPower * 600;
+      const timeToReachCans = maxZ / (baseSpeed * 0.8);
       
-      // Add inaccuracy based on charge strength
-      const maxSpreadX = 30;
-      const maxSpreadY = 20;
+      const vx = (dx / distance) * baseSpeed * 0.6;
+      const arcHeight = 100 + throwPower * 150;
+      const peakTime = timeToReachCans * 0.5;
+      const vy = (arcHeight + 0.5 * gravity * peakTime * peakTime) / peakTime;
+      const vz = baseSpeed;
+      
       const spreadFactor = 1 - throwPower;
-      const vxNoise = (Math.random() - 0.5) * 2 * maxSpreadX * spreadFactor;
-      const vyNoise = (Math.random() - 0.5) * 2 * maxSpreadY * spreadFactor;
+      const vxNoise = (Math.random() - 0.5) * 2 * 80 * spreadFactor;
+      const vyNoise = (Math.random() - 0.5) * 2 * 50 * spreadFactor;
+      const vzNoise = (Math.random() - 0.5) * 2 * 100 * spreadFactor;
       
       const ball = {
         x: originX,
@@ -833,10 +799,14 @@
         z: originZ,
         vx: vx + vxNoise,
         vy: vy + vyNoise,
-        vz: baseVz
+        vz: vz + vzNoise
       };
 
       balls.push(ball);
+      
+      canvas.classList.add('ball-throw');
+      setTimeout(() => canvas.classList.remove('ball-throw'), 300);
+      
       throwsLeft -= 1;
       chargeStrength = 0;
       chargeFill.style.width = "0%";
