@@ -169,6 +169,67 @@
       font-weight: 700;
     }
 
+    .scope-cursor {
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      border: 2px solid rgba(31, 79, 136, 0.7);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .scope-cursor::before {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(31, 79, 136, 0.7);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .scope-cursor::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 12px;
+      background: rgba(31, 79, 136, 0.7);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .side-charge-bar {
+      position: fixed;
+      width: 20px;
+      height: 80px;
+      background: rgba(216, 230, 247, 0.9);
+      border: 2px solid rgba(47, 109, 178, 0.5);
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+      transform: translateX(-100%);
+      margin-left: -10px;
+      overflow: hidden;
+    }
+
+    .side-charge-bar::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(180deg, #49a6ff, #2f6db2);
+      transition: height 60ms linear;
+    }
+
     .actions {
       margin-top: 10px;
       display: flex;
@@ -292,6 +353,9 @@
       </div>
     </section>
 
+    <div class="scope-cursor" id="scopeCursor"></div>
+    <div class="side-charge-bar" id="sideChargeBar"></div>
+
     <section class="charge-wrap" aria-label="Throw strength">
       <div class="charge-label">
         <span>Hold mouse to charge throw</span>
@@ -322,6 +386,8 @@
     const gameOverOverlay = document.getElementById("gameOverOverlay");
     const finalScoreEl = document.getElementById("finalScore");
     const restartBtn = document.getElementById("restartBtn");
+    const scopeCursor = document.getElementById("scopeCursor");
+    const sideChargeBar = document.getElementById("sideChargeBar");
 
     const groundY = 430;
     const stackBaseY = 390;
@@ -443,6 +509,8 @@
       chargeFill.style.width = "0%";
       chargeValue.textContent = "0%";
       gameOverOverlay.classList.remove("open");
+      scopeCursor.style.display = 'none';
+      sideChargeBar.style.display = 'none';
 
       cans = [
         ...createStack(300, 3, -1),
@@ -619,6 +687,12 @@
       isCharging = true;
       chargeStart = performance.now();
       lastPointer = clientToCanvas(clientX, clientY);
+      scopeCursor.style.display = 'block';
+      sideChargeBar.style.display = 'block';
+      scopeCursor.style.left = clientX + 'px';
+      scopeCursor.style.top = clientY + 'px';
+      sideChargeBar.style.left = clientX + 'px';
+      sideChargeBar.style.top = clientY + 'px';
     }
 
     function updateCharge(clientX, clientY) {
@@ -631,6 +705,25 @@
       const pct = Math.round(chargeStrength * 100);
       chargeFill.style.width = `${pct}%`;
       chargeValue.textContent = `${pct}%`;
+      
+      // Update scope cursor and side charge bar positions
+      scopeCursor.style.left = clientX + 'px';
+      scopeCursor.style.top = clientY + 'px';
+      sideChargeBar.style.left = clientX + 'px';
+      sideChargeBar.style.top = clientY + 'px';
+      
+      // Update the fill height of the side charge bar
+      const barFill = sideChargeBar.querySelector('::before') || sideChargeBar;
+      sideChargeBar.style.setProperty('--charge-height', `${pct}%`);
+      // Update the pseudo-element height directly through CSS
+      const style = document.createElement('style');
+      style.textContent = `.side-charge-bar::before { height: ${pct}% !important; }`;
+      // Instead, update through inline style property
+      if (!window.chargeFillStyle) {
+        window.chargeFillStyle = document.createElement('style');
+        document.head.appendChild(window.chargeFillStyle);
+      }
+      window.chargeFillStyle.textContent = `.side-charge-bar::before { height: ${pct}% !important; }`;
     }
 
     function releaseThrow() {
@@ -639,19 +732,33 @@
       }
 
       isCharging = false;
+      scopeCursor.style.display = 'none';
+      sideChargeBar.style.display = 'none';
       const throwPower = Math.max(0.1, chargeStrength);
       const originX = 120;
       const originY = groundY - ballRadius;
       const dx = lastPointer.x - originX;
       const dy = lastPointer.y - originY;
       const len = Math.max(1, Math.hypot(dx, dy));
+      
+      // Calculate base angle towards cursor
+      let angle = Math.atan2(dy, dx);
+      
+      // Add inaccuracy based on charge strength (weaker = less accurate)
+      // At 0% charge: up to ±30 degrees of spread
+      // At 100% charge: ±0 degrees (perfect aim)
+      const maxSpreadAngle = (Math.PI / 6); // 30 degrees in radians
+      const spreadFactor = 1 - throwPower; // Higher power = less spread
+      const spread = (Math.random() - 0.5) * 2 * maxSpreadAngle * spreadFactor;
+      angle += spread;
+      
       const speed = 260 + throwPower * 620;
 
       const ball = {
         x: originX,
         y: originY,
-        vx: (dx / len) * speed,
-        vy: (dy / len) * speed
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed
       };
 
       balls.push(ball);
