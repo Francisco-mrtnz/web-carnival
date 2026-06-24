@@ -583,10 +583,9 @@
       const w = can.w * sizeScale;
       const h = can.h * sizeScale;
       
-      // Calculate screen position based on depth
-      const screenY = groundY - (can.z / maxZ) * (groundY - 100);
+      // Keep original Y position (cans on flat ground), center scaled size on original position
       const x = can.x - (can.w - w) / 2;
-      const y = screenY - h / 2;
+      const y = can.y - (can.h - h) / 2;
       
       ctx.fillStyle = can.value === 10 ? "#ffd34e" : "#d7e5f7";
       ctx.fillRect(x, y, w, h);
@@ -612,19 +611,16 @@
       const sizeScale = Math.max(0.2, 1 - (ball.z / maxZ) * 0.8);
       const radius = ballRadius * sizeScale;
       
-      // Calculate screen y position based on depth
-      const screenY = groundY - (ball.z / maxZ) * (groundY - 100);
-      
       ctx.beginPath();
       ctx.fillStyle = "#4f90d5";
-      ctx.arc(ball.x, screenY, radius, 0, Math.PI * 2);
+      ctx.arc(ball.x, ball.y, radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.closePath();
 
       ctx.beginPath();
       ctx.strokeStyle = "rgba(255,255,255,0.65)";
       ctx.lineWidth = Math.max(1, 2 * sizeScale);
-      ctx.arc(ball.x - 2, screenY - 2, Math.max(0.5, radius - 4), 0, Math.PI * 2);
+      ctx.arc(ball.x - 2, ball.y - 2, Math.max(0.5, radius - 4), 0, Math.PI * 2);
       ctx.stroke();
       ctx.closePath();
     }
@@ -799,51 +795,54 @@
       sideChargeBar.style.display = 'none';
       const throwPower = Math.max(0.1, chargeStrength);
       
-      // Ball starts from center of screen, elevated
+      // Ball starts from center of screen
       const originX = canvas.width / 2;
-      const originY = groundY - 60; // Start elevated above ground
+      const originY = canvas.height / 2;
       const originZ = playerZ;
       
-      // Calculate direction based on mouse position relative to center
+      // Calculate aim based on mouse offset from center
       const centerX = canvas.width / 2;
-      const centerY = groundY - 100; // Aim point is above ground level
-      const dx = lastPointer.x - centerX;
-      const dy = lastPointer.y - centerY;
+      const centerY = canvas.height / 2;
+      const offsetX = lastPointer.x - centerX;
+      const offsetY = lastPointer.y - centerY;
       
-      // Base forward velocity (toward cans) - faster with more power
-      const baseVz = 300 + throwPower * 500;
+      // Forward velocity (toward cans) - higher with more power
+      const baseVz = 250 + throwPower * 450;
       
-      // Time to reach the cans
+      // Time to reach cans
       const timeToReachCans = maxZ / baseVz;
       
-      // Calculate horizontal velocity based on mouse offset and throw power
-      const horizontalRange = (dx / (canvas.width * 0.4)) * 200; // Max ±200 pixels horizontal range
-      const vx = horizontalRange / timeToReachCans;
+      // Horizontal and vertical spread based on mouse offset
+      // Normalize offsets to range [-1, 1] based on screen size
+      const maxOffsetX = canvas.width * 0.3;
+      const maxOffsetY = canvas.height * 0.3;
+      const normalizedOffsetX = Math.max(-1, Math.min(1, offsetX / maxOffsetX));
+      const normalizedOffsetY = Math.max(-1, Math.min(1, offsetY / maxOffsetY));
       
-      // Calculate vertical velocity - higher charge = higher arc
-      // The parabolic arc peaks at around 40% of the time to reach cans
-      const maxHeight = 150 + throwPower * 200; // How high the arc reaches
-      // Using parabolic motion: at peak time (40% of total), vy = 0
-      // Peak height: h = vy*t_peak - 0.5*g*t_peak^2
-      // We solve for vy given the desired peak height and peak time
-      const peakTime = timeToReachCans * 0.5; // Peak at halfway
-      const vy = (maxHeight + 0.5 * gravity * peakTime * peakTime) / peakTime;
+      // Calculate velocities to reach target offset at can depth
+      const vx = (normalizedOffsetX * 150) / timeToReachCans;
+      
+      // Vertical velocity - natural gravity arc
+      // The ball should follow a parabolic path and land roughly where aimed
+      // At can distance, we want to be at targetY
+      // y = y0 + vy*t - 0.5*g*t^2
+      // Solve for vy given desired landing position
+      const targetY = originY + (normalizedOffsetY * 100);
+      const vy = ((targetY - originY) + 0.5 * gravity * timeToReachCans * timeToReachCans) / timeToReachCans;
       
       // Add inaccuracy based on charge strength
-      const maxSpread = 0.08; // Max spread in velocity
+      const maxSpread = 0.12;
       const spreadFactor = 1 - throwPower;
-      const vxSpread = (Math.random() - 0.5) * 2 * maxSpread * spreadFactor;
-      const vySpread = (Math.random() - 0.5) * 2 * maxSpread * spreadFactor;
+      const vxNoise = (Math.random() - 0.5) * 2 * maxSpread * 100 * spreadFactor;
+      const vyNoise = (Math.random() - 0.5) * 2 * maxSpread * 50 * spreadFactor;
       
       const ball = {
         x: originX,
         y: originY,
         z: originZ,
-        vx: vx + vxSpread * 50,
-        vy: vy + vySpread * 50,
-        vz: baseVz,
-        startZ: originZ,
-        maxZ: maxZ
+        vx: vx + vxNoise,
+        vy: vy + vyNoise,
+        vz: baseVz
       };
 
       balls.push(ball);
