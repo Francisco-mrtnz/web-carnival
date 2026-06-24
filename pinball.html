@@ -416,7 +416,7 @@
       contains(x, y) {
         const dx = x - this.x;
         const dy = y - this.y;
-        return Math.sqrt(dx * dx + dy * dy) <= this.radius;
+        return Math.sqrt(dx * dx + dy * dy) <= this.radius * 0.6;
       }
     }
 
@@ -433,6 +433,75 @@
         this.vy += gravity * dt;
         this.x += this.vx * dt;
         this.y += this.vy * dt;
+        
+        // Ramp wall collisions
+        const centerX = canvas.width / 2;
+        
+        // Left wall (from (centerX - 100, rampStartY) to (centerX - 50, rampEndY))
+        const leftWallCollision = this.checkLineCollision(
+          centerX - 100, rampStartY, centerX - 50, rampEndY
+        );
+        if (leftWallCollision) {
+          this.vx *= -0.8;
+          this.x = leftWallCollision.x;
+        }
+        
+        // Right wall (from (centerX + 100, rampStartY) to (centerX + 50, rampEndY))
+        const rightWallCollision = this.checkLineCollision(
+          centerX + 100, rampStartY, centerX + 50, rampEndY
+        );
+        if (rightWallCollision) {
+          this.vx *= -0.8;
+          this.x = rightWallCollision.x;
+        }
+        
+        // Cup rim bouncing
+        for (const cup of cups) {
+          const dx = this.x - cup.x;
+          const dy = this.y - cup.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const minDist = this.radius + cup.radius;
+          
+          if (distance < minDist && distance > 0) {
+            // Ball is hitting the rim, bounce it
+            const angle = Math.atan2(dy, dx);
+            this.x = cup.x + Math.cos(angle) * minDist;
+            this.y = cup.y + Math.sin(angle) * minDist;
+            
+            // Reflect velocity
+            const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+            this.vx = Math.cos(angle) * speed * 0.7;
+            this.vy = Math.sin(angle) * speed * 0.7;
+          }
+        }
+      }
+      
+      checkLineCollision(x1, y1, x2, y2) {
+        // Check collision with a line segment
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const nx = -dy / len;
+        const ny = dx / len;
+        
+        const px = this.x - x1;
+        const py = this.y - y1;
+        
+        const t = Math.max(0, Math.min(1, (px * dx + py * dy) / (len * len)));
+        const closestX = x1 + t * dx;
+        const closestY = y1 + t * dy;
+        
+        const distX = this.x - closestX;
+        const distY = this.y - closestY;
+        const distance = Math.sqrt(distX * distX + distY * distY);
+        
+        if (distance < this.radius) {
+          return {
+            x: closestX + (distX / distance) * this.radius,
+            y: closestY + (distY / distance) * this.radius
+          };
+        }
+        return null;
       }
 
       draw(ctx) {
@@ -454,12 +523,17 @@
     function initializeCups() {
       const cupScores = [100, 200, 300, 500, 750, 1000];
       const colors = ["#e74c3c", "#3498db", "#2ecc71", "#e91e63", "#f39c12", "#9b59b6"];
-      const startX = canvas.width / 2 - 150;
+      
+      // Hexagonal arrangement
+      const centerX = canvas.width / 2;
+      const centerY = 140;
+      const radius = 70;
       
       cups = [];
       for (let i = 0; i < 6; i++) {
-        const x = startX + i * 60;
-        const y = 150;
+        const angle = (i * Math.PI / 3) - Math.PI / 2;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
         cups.push(new Cup(x, y, cupScores[i], colors[i]));
       }
     }
