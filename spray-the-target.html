@@ -423,6 +423,21 @@
         this.color = color;
         this.createdAt = performance.now();
         this.duration = 500; // 0.5 second animation
+        
+        // Pre-create sprite once to avoid recreation every frame
+        this.sprite = makeSprite(80, 80, (sctx, w, h) => {
+          sctx.fillStyle = this.color;
+          for (let i = 0; i < 8; i++) {
+            const a = (Math.PI * 2 * i) / 8;
+            sctx.beginPath();
+            sctx.arc(w / 2 + Math.cos(a) * 20, h / 2 + Math.sin(a) * 20, 8, 0, Math.PI * 2);
+            sctx.fill();
+          }
+          sctx.fillStyle = "#fff";
+          sctx.beginPath();
+          sctx.arc(w / 2, h / 2, 10, 0, Math.PI * 2);
+          sctx.fill();
+        });
       }
 
       isExpired(now) {
@@ -438,22 +453,9 @@
         const radius = targetRadius * (1 + progress * 1.5);
         const opacity = 1 - progress;
 
-        // Colored splash sprite
+        // Colored splash using cached sprite
         ctx.globalAlpha = opacity * 0.8;
-        const splashSprite = makeSprite(80, 80, (sctx, w, h) => {
-          sctx.fillStyle = this.color;
-          for (let i = 0; i < 8; i++) {
-            const a = (Math.PI * 2 * i) / 8;
-            sctx.beginPath();
-            sctx.arc(w / 2 + Math.cos(a) * 20, h / 2 + Math.sin(a) * 20, 8, 0, Math.PI * 2);
-            sctx.fill();
-          }
-          sctx.fillStyle = "#fff";
-          sctx.beginPath();
-          sctx.arc(w / 2, h / 2, 10, 0, Math.PI * 2);
-          sctx.fill();
-        });
-        ctx.drawImage(splashSprite, this.x - radius, this.y - radius, radius * 2, radius * 2);
+        ctx.drawImage(this.sprite, this.x - radius, this.y - radius, radius * 2, radius * 2);
 
         // Inner white splash
         ctx.globalAlpha = opacity * 0.5;
@@ -616,6 +618,9 @@
       for (const splash of splashes) {
         splash.draw(ctx);
       }
+      
+      // Ensure globalAlpha is reset
+      ctx.globalAlpha = 1;
     }
 
     function endGame() {
@@ -670,6 +675,7 @@
     function resetGame() {
       if (window.targetSpawnInterval) {
         window.clearInterval(window.targetSpawnInterval);
+        window.targetSpawnInterval = null;
       }
       gameActive = false;
       gameOver = false;
@@ -680,6 +686,7 @@
       scoreEl.textContent = "0";
       timerEl.textContent = "45";
       gameOverOverlay.classList.remove("open");
+      ctx.globalAlpha = 1;  // Reset global alpha
     }
 
     const scopeCursor = document.getElementById("scopeCursor");

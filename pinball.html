@@ -469,8 +469,14 @@
           centerX - 100, rampStartY, centerX - 50, rampEndY
         );
         if (leftWallCollision) {
-          this.vx *= -0.8;
+          // Proper velocity reflection off wall
+          const normalX = leftWallCollision.normalX;
+          const normalY = leftWallCollision.normalY;
+          const dotProduct = this.vx * normalX + this.vy * normalY;
+          this.vx = (this.vx - 2 * dotProduct * normalX) * 0.8;
+          this.vy = (this.vy - 2 * dotProduct * normalY) * 0.8;
           this.x = leftWallCollision.x;
+          this.y = leftWallCollision.y;
         }
         
         // Right wall (from (centerX + 100, rampStartY) to (centerX + 50, rampEndY))
@@ -478,8 +484,14 @@
           centerX + 100, rampStartY, centerX + 50, rampEndY
         );
         if (rightWallCollision) {
-          this.vx *= -0.8;
+          // Proper velocity reflection off wall
+          const normalX = rightWallCollision.normalX;
+          const normalY = rightWallCollision.normalY;
+          const dotProduct = this.vx * normalX + this.vy * normalY;
+          this.vx = (this.vx - 2 * dotProduct * normalX) * 0.8;
+          this.vy = (this.vy - 2 * dotProduct * normalY) * 0.8;
           this.x = rightWallCollision.x;
+          this.y = rightWallCollision.y;
         }
         
         // Cup rim bouncing
@@ -490,15 +502,18 @@
           const minDist = this.radius + cup.radius;
           
           if (distance < minDist && distance > 0) {
-            // Ball is hitting the rim, bounce it
-            const angle = Math.atan2(dy, dx);
-            this.x = cup.x + Math.cos(angle) * minDist;
-            this.y = cup.y + Math.sin(angle) * minDist;
+            // Ball is hitting the rim, bounce it off
+            const normalX = dx / distance;
+            const normalY = dy / distance;
             
-            // Reflect velocity
-            const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-            this.vx = Math.cos(angle) * speed * 0.7;
-            this.vy = Math.sin(angle) * speed * 0.7;
+            // Position ball outside rim
+            this.x = cup.x + normalX * minDist;
+            this.y = cup.y + normalY * minDist;
+            
+            // Reflect velocity properly
+            const dotProduct = this.vx * normalX + this.vy * normalY;
+            this.vx = (this.vx - 2 * dotProduct * normalX) * 0.7;
+            this.vy = (this.vy - 2 * dotProduct * normalY) * 0.7;
           }
         }
       }
@@ -508,8 +523,8 @@
         const dx = x2 - x1;
         const dy = y2 - y1;
         const len = Math.sqrt(dx * dx + dy * dy);
-        const nx = -dy / len;
-        const ny = dx / len;
+        const nx = -dy / len;  // Normal vector X
+        const ny = dx / len;   // Normal vector Y
         
         const px = this.x - x1;
         const py = this.y - y1;
@@ -523,9 +538,13 @@
         const distance = Math.sqrt(distX * distX + distY * distY);
         
         if (distance < this.radius) {
+          const normalX = distX / distance;
+          const normalY = distY / distance;
           return {
-            x: closestX + (distX / distance) * this.radius,
-            y: closestY + (distY / distance) * this.radius
+            x: closestX + normalX * this.radius,
+            y: closestY + normalY * this.radius,
+            normalX: normalX,
+            normalY: normalY
           };
         }
         return null;
