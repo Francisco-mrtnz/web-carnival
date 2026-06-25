@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Number Drop</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #11998e, #38ef7d); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #000; border-radius: 10px; display: block; margin: 15px 0; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #11998e; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #11998e; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔢 Number Drop</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+        <span>Target: <span id="target">50</span></span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Collect numbers to reach target!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2 id="result">Level Complete!</h2>
+      <p>Score: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const targetEl = document.getElementById('target');
+    const resultEl = document.getElementById('result');
+    const finalScoreEl = document.getElementById('finalScore');
+    const modalEl = document.getElementById('modal');
+
+    let score = 0;
+    let target = 50;
+    let gameActive = true;
+    let lastFrame = Date.now();
+    let basket = { x: 460, y: 470, w: 80, h: 20 };
+    let numbers = [];
+    let mouseX = 460;
+
+    class Number {
+      constructor() {
+        this.x = Math.random() * (canvas.width - 30) + 15;
+        this.y = -20;
+        this.value = Math.floor(Math.random() * 9) + 1;
+        this.vy = Math.random() * 80 + 100;
+        this.r = 15;
+      }
+
+      update(dt) {
+        this.y += this.vy * dt;
+      }
+
+      draw(ctx) {
+        ctx.fillStyle = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][this.value % 5];
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.value, this.x, this.y);
+      }
+
+      isCaught(bx, by, bw) {
+        return this.x > bx && this.x < bx + bw && this.y > by && this.y < by + 40;
+      }
+
+      isOffScreen() {
+        return this.y > canvas.height;
+      }
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      basket.x = mouseX - basket.w / 2;
+      basket.x = Math.max(0, Math.min(canvas.width - basket.w, basket.x));
+
+      for (let num of numbers) {
+        num.update(dt);
+        if (num.isCaught(basket.x, basket.y, basket.w)) {
+          score += num.value;
+          scoreEl.textContent = score;
+          numbers = numbers.filter(n => n !== num);
+
+          if (score >= target) {
+            gameActive = false;
+            finalScoreEl.textContent = score;
+            resultEl.textContent = '🎉 Level Complete!';
+            modalEl.classList.add('open');
+          }
+        }
+      }
+
+      numbers = numbers.filter(n => !n.isOffScreen());
+
+      if (Math.random() < 0.06) {
+        numbers.push(new Number());
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Basket
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(basket.x, basket.y, basket.w, basket.h);
+      ctx.strokeStyle = '#FF6B6B';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(basket.x, basket.y, basket.w, basket.h);
+
+      for (let num of numbers) {
+        num.draw(ctx);
+      }
+
+      // Progress bar
+      ctx.fillStyle = '#333';
+      ctx.fillRect(50, 20, 300, 20);
+      const progress = Math.min(score / target, 1);
+      ctx.fillStyle = '#00FF00';
+      ctx.fillRect(50, 20, progress * 300, 20);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(50, 20, 300, 20);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Progress: ${score}/${target}`, 200, 35);
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

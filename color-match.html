@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Color Match</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #f093fb, #f5576c); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #fff; border-radius: 10px; display: block; margin: 15px 0; cursor: pointer; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #f5576c; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #f5576c; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌈 Color Match</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+        <span>Time: <span id="timer">60</span>s</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Click the correct color box!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Score: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
+
+    let score = 0;
+    let timeLeft = 60;
+    let gameActive = true;
+    let startTime = Date.now();
+    let lastFrame = Date.now();
+
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
+    let currentColor = colors[0];
+    let boxes = [];
+
+    class ColorBox {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.w = 150;
+        this.h = 150;
+      }
+
+      contains(x, y) {
+        return x > this.x && x < this.x + this.w && y > this.y && y < this.y + this.h;
+      }
+
+      draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+      }
+    }
+
+    function generateLevel() {
+      boxes = [];
+      currentColor = colors[Math.floor(Math.random() * colors.length)];
+      const shuffled = [...colors].sort(() => Math.random() - 0.5);
+
+      let idx = 0;
+      for (let i = 0; i < 2; i++) {
+        for (let j = 0; j < 3; j++) {
+          boxes.push(new ColorBox(80 + j * 280, 150 + i * 200, shuffled[idx++]));
+        }
+      }
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      timeLeft = Math.max(0, 60 - elapsed);
+      timerEl.textContent = timeLeft;
+
+      if (timeLeft === 0) {
+        gameActive = false;
+        finalScoreEl.textContent = score;
+        modalEl.classList.add('open');
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw instruction
+      ctx.fillStyle = currentColor;
+      ctx.fillRect(100, 30, 300, 80);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(100, 30, 300, 80);
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click this color:', 250, 55);
+      ctx.fillText('↓', 250, 90);
+
+      for (let box of boxes) {
+        box.draw(ctx);
+      }
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (!gameActive) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      for (let box of boxes) {
+        if (box.contains(x, y)) {
+          if (box.color === currentColor) {
+            score++;
+            scoreEl.textContent = score;
+            generateLevel();
+          }
+          break;
+        }
+      }
+    });
+
+    generateLevel();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

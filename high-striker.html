@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>High Striker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #9b59b6, #8e44ad); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #E8D4F8; border-radius: 10px; display: block; margin: 15px 0; cursor: pointer; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #9b59b6; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #9b59b6; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔨 High Striker</h1>
+      <div class="stats">
+        <span>Best Strike: <span id="score">0</span>m</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Hold and click to strike!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Strike Power!</h2>
+      <p>Height: <span id="finalScore">0</span>m</p>
+      <button onclick="location.reload()">Strike Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const finalScoreEl = document.getElementById('finalScore');
+    const modalEl = document.getElementById('modal');
+
+    let bestScore = 0;
+    let gameState = 'ready'; // ready, charging, launched
+    let chargeLevel = 0;
+    let puckHeight = 0;
+    let puckVelocity = 0;
+    const maxCharge = 100;
+    const gravity = 300;
+
+    function resetGame() {
+      gameState = 'ready';
+      chargeLevel = 0;
+      puckHeight = 0;
+      puckVelocity = 0;
+    }
+
+    function draw() {
+      // Background
+      ctx.fillStyle = '#E8D4F8';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Base
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(350, 400, 220, 80);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(350, 400, 220, 80);
+
+      // Strike platform
+      ctx.fillStyle = '#FF6B6B';
+      ctx.fillRect(430, 380, 60, 30);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(430, 380, 60, 30);
+
+      // Pole with markers
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(460, 380);
+      ctx.lineTo(460, 80);
+      ctx.stroke();
+
+      // Height markers
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 12px Arial';
+      ctx.textAlign = 'right';
+      for (let i = 1; i <= 5; i++) {
+        const y = 380 - i * 60;
+        ctx.fillRect(450, y, 20, 2);
+        ctx.fillText((i * 10) + 'm', 445, y + 5);
+      }
+
+      // Puck
+      if (gameState !== 'ready') {
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.arc(460, 380 - puckHeight, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Charge bar
+      if (gameState === 'charging') {
+        ctx.fillStyle = '#333';
+        ctx.fillRect(700, 100, 150, 20);
+        ctx.fillStyle = chargeLevel > 70 ? '#FF6B6B' : chargeLevel > 40 ? '#FFD700' : '#00FF00';
+        ctx.fillRect(700, 100, (chargeLevel / maxCharge) * 150, 20);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(700, 100, 150, 20);
+
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Charge: ${chargeLevel}%`, 775, 70);
+      }
+
+      // Instructions
+      ctx.fillStyle = '#333';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(gameState === 'ready' ? 'Click to start charging!' : gameState === 'charging' ? 'Click to strike!' : 'Releasing...', 50, 50);
+    }
+
+    function update() {
+      if (gameState === 'launching' || gameState === 'launched') {
+        puckVelocity -= gravity * 0.016;
+        puckHeight += puckVelocity * 0.016;
+
+        if (puckHeight <= 0) {
+          puckHeight = 0;
+          gameState = 'idle';
+          const finalHeight = Math.max(0, Math.round((chargeLevel / maxCharge) * 50));
+          finalScoreEl.textContent = finalHeight;
+          if (finalHeight > bestScore) {
+            bestScore = finalHeight;
+            scoreEl.textContent = bestScore;
+          }
+          setTimeout(() => {
+            modalEl.classList.add('open');
+          }, 500);
+        }
+      }
+    }
+
+    let chargeInterval = null;
+
+    canvas.addEventListener('mousedown', () => {
+      if (gameState === 'ready' || gameState === 'idle') {
+        gameState = 'charging';
+        chargeLevel = 0;
+        chargeInterval = setInterval(() => {
+          chargeLevel = Math.min(chargeLevel + 3, maxCharge);
+        }, 30);
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      if (gameState === 'charging') {
+        clearInterval(chargeInterval);
+        gameState = 'launching';
+        puckVelocity = (chargeLevel / maxCharge) * 400;
+      }
+    });
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

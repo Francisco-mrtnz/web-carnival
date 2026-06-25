@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pop Bubbles</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #00B4DB, #0083B0); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #E0F7FA; border-radius: 10px; display: block; margin: 15px 0; cursor: crosshair; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #00B4DB; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #00B4DB; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🫧 Pop Bubbles</h1>
+      <div class="stats">
+        <span>Popped: <span id="score">0</span></span>
+        <span>Time: <span id="timer">30</span>s</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Click bubbles to pop them!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Time's Up!</h2>
+      <p>Popped: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const finalScoreEl = document.getElementById('finalScore');
+    const modalEl = document.getElementById('modal');
+
+    let score = 0;
+    let timeLeft = 30;
+    let gameActive = true;
+    let startTime = Date.now();
+    let lastFrame = Date.now();
+    let bubbles = [];
+
+    class Bubble {
+      constructor() {
+        this.x = Math.random() * (canvas.width - 80) + 40;
+        this.y = Math.random() * (canvas.height - 80) + 40;
+        this.r = Math.random() * 20 + 15;
+        this.vx = (Math.random() - 0.5) * 100;
+        this.vy = (Math.random() - 0.5) * 100;
+        this.opacity = 1;
+        this.color = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'][Math.floor(Math.random() * 5)];
+      }
+
+      update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        if (this.x - this.r < 0 || this.x + this.r > canvas.width) this.vx *= -1;
+        if (this.y - this.r < 0 || this.y + this.r > canvas.height) this.vy *= -1;
+
+        this.x = Math.max(this.r, Math.min(canvas.width - this.r, this.x));
+        this.y = Math.max(this.r, Math.min(canvas.height - this.r, this.y));
+
+        this.opacity -= 0.005;
+      }
+
+      draw(ctx) {
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      isPopped(x, y) {
+        const dx = this.x - x;
+        const dy = this.y - y;
+        return Math.sqrt(dx * dx + dy * dy) < this.r;
+      }
+
+      isExpired() {
+        return this.opacity <= 0;
+      }
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      timeLeft = Math.max(0, 30 - elapsed);
+      timerEl.textContent = timeLeft;
+
+      if (timeLeft === 0) {
+        gameActive = false;
+        finalScoreEl.textContent = score;
+        modalEl.classList.add('open');
+        return;
+      }
+
+      for (let bubble of bubbles) {
+        bubble.update(dt);
+      }
+
+      bubbles = bubbles.filter(b => !b.isExpired());
+
+      if (Math.random() < 0.08) {
+        bubbles.push(new Bubble());
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#E0F7FA';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let bubble of bubbles) {
+        bubble.draw(ctx);
+      }
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (!gameActive) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      for (let i = bubbles.length - 1; i >= 0; i--) {
+        if (bubbles[i].isPopped(x, y)) {
+          score++;
+          scoreEl.textContent = score;
+          bubbles.splice(i, 1);
+          break;
+        }
+      }
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

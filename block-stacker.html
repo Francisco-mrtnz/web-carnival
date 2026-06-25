@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Block Stacker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #F2994E, #F2C94C); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #F5E6D3; border-radius: 10px; display: block; margin: 15px 0; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #F2994E; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #F2994E; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🧱 Block Stacker</h1>
+      <div class="stats">
+        <span>Height: <span id="score">0</span>m</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Stack blocks precisely!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2 id="result">Stack Toppled!</h2>
+      <p>Height: <span id="finalScore">0</span>m</p>
+      <button onclick="location.reload()">Try Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const resultEl = document.getElementById('result');
+    const finalScoreEl = document.getElementById('finalScore');
+    const modalEl = document.getElementById('modal');
+
+    let blocks = [];
+    let gameActive = true;
+    let lastFrame = Date.now();
+    let nextBlockX = 230;
+    let nextBlockMoving = true;
+    let score = 0;
+    let blockColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
+
+    class Block {
+      constructor(x, y, isMoving) {
+        this.x = x;
+        this.y = y;
+        this.w = 60;
+        this.h = 20;
+        this.vx = isMoving ? 150 : 0;
+        this.color = blockColors[blocks.length % 5];
+      }
+
+      update(dt) {
+        if (this.vx !== 0) {
+          this.x += this.vx * dt;
+          if (this.x < 50 || this.x + this.w > 870) {
+            this.vx *= -1;
+          }
+        }
+      }
+
+      draw(ctx) {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+      }
+
+      checkCollisionWith(other) {
+        return this.x < other.x + other.w &&
+               this.x + this.w > other.x &&
+               this.y < other.y + other.h &&
+               this.y + this.h > other.y;
+      }
+
+      stop() {
+        this.vx = 0;
+      }
+
+      fall(dt) {
+        this.y += 500 * dt;
+      }
+
+      isOutOfBounds() {
+        return this.y > canvas.height;
+      }
+    }
+
+    function addBlock() {
+      const startY = blocks.length === 0 ? 450 : blocks[blocks.length - 1].y - 25;
+      blocks.push(new Block(nextBlockX, startY, true));
+      nextBlockX = 230;
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      // Update moving block
+      if (blocks.length > 0) {
+        const movingBlock = blocks[blocks.length - 1];
+        if (movingBlock.vx !== 0) {
+          movingBlock.update(dt);
+        }
+      }
+
+      // Check if tower is falling
+      for (let i = blocks.length - 2; i >= 0; i--) {
+        blocks[i].fall(dt);
+        if (blocks[i].isOutOfBounds()) {
+          gameActive = false;
+          const height = Math.max(0, blocks.length - 1);
+          finalScoreEl.textContent = height;
+          resultEl.textContent = height > 5 ? '🎉 Great!' : '👍 Good try!';
+          modalEl.classList.add('open');
+          return;
+        }
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#F5E6D3';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Instructions
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click to drop the block!', 460, 40);
+
+      // Ground
+      ctx.fillStyle = '#8B7355';
+      ctx.fillRect(0, 480, canvas.width, 40);
+
+      for (let block of blocks) {
+        block.draw(ctx);
+      }
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = Math.min((now - lastFrame) / 1000, 0.033);
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', () => {
+      if (!gameActive) return;
+
+      if (blocks.length === 0) {
+        addBlock();
+      } else {
+        const movingBlock = blocks[blocks.length - 1];
+        const prevBlock = blocks.length > 1 ? blocks[blocks.length - 2] : null;
+
+        if (prevBlock) {
+          const overlapStart = Math.max(movingBlock.x, prevBlock.x);
+          const overlapEnd = Math.min(movingBlock.x + movingBlock.w, prevBlock.x + prevBlock.w);
+          const overlap = overlapEnd - overlapStart;
+
+          if (overlap > 10) {
+            movingBlock.x = overlapStart;
+            movingBlock.stop();
+            score++;
+            scoreEl.textContent = score;
+
+            setTimeout(() => {
+              if (gameActive) addBlock();
+            }, 500);
+          } else {
+            gameActive = false;
+            finalScoreEl.textContent = score;
+            resultEl.textContent = '❌ Missed!';
+            modalEl.classList.add('open');
+          }
+        } else {
+          movingBlock.stop();
+          score++;
+          scoreEl.textContent = score;
+          setTimeout(() => {
+            if (gameActive) addBlock();
+          }, 500);
+        }
+      }
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

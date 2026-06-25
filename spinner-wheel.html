@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spinner Wheel</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #FF6B00, #FFB347); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #fff; border-radius: 10px; display: block; margin: 15px 0; cursor: pointer; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #FF6B00; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #FF6B00; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎡 Spinner Wheel</h1>
+      <div class="stats">
+        <span>Wins: <span id="score">0</span></span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Click the wheel to spin!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2 id="result">You Won!</h2>
+      <p id="reward">Great job!</p>
+      <button onclick="location.reload()">Spin Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const resultEl = document.getElementById('result');
+    const rewardEl = document.getElementById('reward');
+    const modalEl = document.getElementById('modal');
+
+    let score = 0;
+    let spinning = false;
+    let rotation = 0;
+    let targetRotation = 0;
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
+    const sections = 6;
+
+    function spin() {
+      if (spinning) return;
+      spinning = true;
+      targetRotation = Math.random() * 360 + 3600;
+      const startTime = Date.now();
+      const duration = 3000;
+
+      function animate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        rotation = easeProgress * targetRotation;
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          rotation = targetRotation % 360;
+          spinning = false;
+
+          const sectionIndex = Math.floor(((360 - rotation) % 360) / (360 / sections));
+          score++;
+          scoreEl.textContent = score;
+
+          resultEl.textContent = ['🎉 Jackpot!', '💰 Great!', '🌟 Nice!', '👍 Good!', '🎊 Awesome!', '✨ Lucky!'][sectionIndex];
+          rewardEl.textContent = `You landed on section ${sectionIndex + 1}!`;
+          modalEl.classList.add('open');
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function draw() {
+      ctx.save();
+      ctx.translate(460, 260);
+      ctx.rotate((rotation * Math.PI) / 180);
+
+      for (let i = 0; i < sections; i++) {
+        const angle = (360 / sections) * i;
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.arc(0, 0, 150, (angle * Math.PI) / 180, ((angle + 360 / sections) * Math.PI) / 180);
+        ctx.lineTo(0, 0);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.save();
+        ctx.rotate(((angle + 360 / (sections * 2)) * Math.PI) / 180);
+        ctx.fillText(['💎', '🏆', '🎁', '⭐', '💜', '🔥'][i], 0, -100);
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(460, 100);
+      ctx.lineTo(440, 130);
+      ctx.lineTo(480, 130);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function gameLoop() {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', spin);
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

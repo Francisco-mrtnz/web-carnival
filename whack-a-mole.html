@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Whack-a-Mole</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #11998e, #38ef7d); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #90EE90; border-radius: 10px; display: block; margin: 15px 0; border: 2px solid rgba(0,0,0,0.1); cursor: crosshair; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #11998e; }
+    .modal-content p { margin: 10px 0; font-size: 1.1rem; font-weight: bold; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #11998e; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔨 Whack-a-Mole</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+        <span>Time: <span id="timer">30</span>s</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Click moles when they appear!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Moles Hit: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
+
+    let score = 0;
+    let timeLeft = 30;
+    let gameActive = true;
+    let moles = [];
+    let startTime = Date.now();
+    let lastFrame = Date.now();
+
+    const holes = [
+      { x: 150, y: 150 }, { x: 460, y: 150 }, { x: 770, y: 150 },
+      { x: 150, y: 300 }, { x: 460, y: 300 }, { x: 770, y: 300 },
+      { x: 150, y: 450 }, { x: 460, y: 450 }, { x: 770, y: 450 }
+    ];
+
+    class Mole {
+      constructor(hole) {
+        this.hole = hole;
+        this.popTime = Date.now() + Math.random() * 2000;
+        this.visible = false;
+        this.lifetime = 800;
+        this.hit = false;
+      }
+
+      update() {
+        const now = Date.now();
+        this.visible = now > this.popTime && now < this.popTime + this.lifetime;
+      }
+
+      draw(ctx) {
+        if (!this.visible) return;
+        const now = Date.now();
+        const age = now - this.popTime;
+        const pop = Math.sin((age / this.lifetime) * Math.PI) * 30;
+
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.arc(this.hole.x, this.hole.y - pop, 30, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(this.hole.x - 10, this.hole.y - pop - 10, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.hole.x + 10, this.hole.y - pop - 10, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      checkHit(x, y) {
+        if (!this.visible || this.hit) return false;
+        const now = Date.now();
+        const age = now - this.popTime;
+        const pop = Math.sin((age / this.lifetime) * Math.PI) * 30;
+        const dx = x - this.hole.x;
+        const dy = y - (this.hole.y - pop);
+        if (Math.sqrt(dx * dx + dy * dy) < 35) {
+          this.hit = true;
+          return true;
+        }
+        return false;
+      }
+
+      isExpired() {
+        return Date.now() > this.popTime + this.lifetime;
+      }
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      timeLeft = Math.max(0, 30 - elapsed);
+      timerEl.textContent = timeLeft;
+
+      if (timeLeft === 0) {
+        gameActive = false;
+        finalScoreEl.textContent = score;
+        modalEl.classList.add('open');
+        return;
+      }
+
+      for (let mole of moles) {
+        mole.update();
+      }
+
+      moles = moles.filter(m => !m.isExpired());
+
+      if (Math.random() < 0.15) {
+        const hole = holes[Math.floor(Math.random() * holes.length)];
+        moles.push(new Mole(hole));
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#90EE90';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let hole of holes) {
+        ctx.fillStyle = '#654321';
+        ctx.beginPath();
+        ctx.arc(hole.x, hole.y, 40, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (let mole of moles) {
+        mole.draw(ctx);
+      }
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (!gameActive) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      for (let mole of moles) {
+        if (mole.checkHit(x, y)) {
+          score++;
+          scoreEl.textContent = score;
+          break;
+        }
+      }
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

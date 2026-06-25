@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asteroid Blast</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #0a0a0a, #1a1a2e); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.5); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #000; border-radius: 10px; display: block; margin: 15px 0; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #00FF00; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #00FF00; color: #000; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>💥 Asteroid Blast</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+        <span>Lives: <span id="lives">3</span></span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Move mouse, click to shoot!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Score: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const livesEl = document.getElementById('lives');
+    const finalScoreEl = document.getElementById('finalScore');
+    const modalEl = document.getElementById('modal');
+
+    let ship = { x: 460, y: 470, angle: 0, r: 15 };
+    let asteroids = [];
+    let bullets = [];
+    let score = 0;
+    let lives = 3;
+    let gameActive = true;
+    let lastFrame = Date.now();
+    let mouseX = 460;
+    let mouseY = 470;
+
+    class Asteroid {
+      constructor(x, y, r) {
+        this.x = x;
+        this.y = y;
+        this.r = r;
+        this.vx = (Math.random() - 0.5) * 150;
+        this.vy = (Math.random() - 0.5) * 150;
+      }
+
+      update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        if (this.x < 0) this.x = canvas.width;
+        if (this.x > canvas.width) this.x = 0;
+        if (this.y < 0) this.y = canvas.height;
+        if (this.y > canvas.height) this.y = 0;
+      }
+
+      draw(ctx) {
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const x = this.x + Math.cos(angle) * this.r;
+          const y = this.y + Math.sin(angle) * this.r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+
+      isHit(bx, by) {
+        const dx = this.x - bx;
+        const dy = this.y - by;
+        return Math.sqrt(dx * dx + dy * dy) < this.r + 3;
+      }
+
+      isShipHit(sx, sy, sr) {
+        const dx = this.x - sx;
+        const dy = this.y - sy;
+        return Math.sqrt(dx * dx + dy * dy) < this.r + sr;
+      }
+    }
+
+    class Bullet {
+      constructor(x, y, angle) {
+        this.x = x;
+        this.y = y;
+        this.speed = 400;
+        this.vx = Math.cos(angle) * this.speed;
+        this.vy = Math.sin(angle) * this.speed;
+      }
+
+      update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+      }
+
+      draw(ctx) {
+        ctx.fillStyle = '#00FF00';
+        ctx.fillRect(this.x - 2, this.y - 2, 4, 4);
+      }
+
+      isOffScreen() {
+        return this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height;
+      }
+    }
+
+    function spawnAsteroids() {
+      asteroids = [];
+      for (let i = 0; i < 3; i++) {
+        asteroids.push(new Asteroid(Math.random() * canvas.width, Math.random() * 100, 30));
+      }
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      ship.angle = Math.atan2(mouseY - ship.y, mouseX - ship.x);
+
+      for (let asteroid of asteroids) {
+        asteroid.update(dt);
+        if (asteroid.isShipHit(ship.x, ship.y, ship.r)) {
+          lives--;
+          livesEl.textContent = lives;
+          if (lives <= 0) {
+            gameActive = false;
+            finalScoreEl.textContent = score;
+            modalEl.classList.add('open');
+          }
+          spawnAsteroids();
+          return;
+        }
+      }
+
+      for (let bullet of bullets) {
+        bullet.update(dt);
+      }
+
+      bullets = bullets.filter(b => !b.isOffScreen());
+
+      for (let asteroid of [...asteroids]) {
+        for (let bullet of [...bullets]) {
+          if (asteroid.isHit(bullet.x, bullet.y)) {
+            asteroids = asteroids.filter(a => a !== asteroid);
+            bullets = bullets.filter(b => b !== bullet);
+            score += 10;
+            scoreEl.textContent = score;
+            break;
+          }
+        }
+      }
+
+      if (asteroids.length === 0) {
+        spawnAsteroids();
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Ship
+      ctx.save();
+      ctx.translate(ship.x, ship.y);
+      ctx.rotate(ship.angle);
+      ctx.strokeStyle = '#00FF00';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(15, 0);
+      ctx.lineTo(-10, -10);
+      ctx.lineTo(-5, 0);
+      ctx.lineTo(-10, 10);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+
+      for (let asteroid of asteroids) {
+        asteroid.draw(ctx);
+      }
+
+      for (let bullet of bullets) {
+        bullet.draw(ctx);
+      }
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = Math.min((now - lastFrame) / 1000, 0.033);
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+    });
+
+    canvas.addEventListener('click', () => {
+      if (gameActive) {
+        bullets.push(new Bullet(ship.x, ship.y, ship.angle));
+      }
+    });
+
+    spawnAsteroids();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flappy Bird</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #87CEEB, #E0F6FF); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.2); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: linear-gradient(180deg, #87CEEB, #E0F6FF); border-radius: 10px; display: block; margin: 15px 0; cursor: pointer; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #FF6B6B; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #FF6B6B; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🐦 Flappy Bird</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Click to flap!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Score: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
+
+    let bird = { x: 100, y: 260, r: 15, vy: 0, vx: 100 };
+    let pipes = [];
+    let score = 0;
+    let gameActive = true;
+    let lastFrame = Date.now();
+    const gravity = 500;
+    const flapPower = -300;
+
+    class Pipe {
+      constructor() {
+        this.x = canvas.width;
+        this.gapSize = 150;
+        this.gapY = Math.random() * (canvas.height - this.gapSize - 100) + 50;
+        this.w = 60;
+        this.scored = false;
+      }
+
+      update(dt) {
+        this.x -= 200 * dt;
+      }
+
+      draw(ctx) {
+        ctx.fillStyle = '#228B22';
+        ctx.fillRect(this.x, 0, this.w, this.gapY);
+        ctx.fillRect(this.x, this.gapY + this.gapSize, this.w, canvas.height - this.gapY - this.gapSize);
+      }
+
+      isOutOfBounds() {
+        return this.x < -this.w;
+      }
+
+      checkCollision(bird) {
+        if (bird.x + bird.r > this.x && bird.x - bird.r < this.x + this.w) {
+          if (bird.y - bird.r < this.gapY || bird.y + bird.r > this.gapY + this.gapSize) {
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      bird.vy += gravity * dt;
+      bird.y += bird.vy * dt;
+
+      for (let pipe of pipes) {
+        pipe.update(dt);
+
+        if (pipe.checkCollision(bird)) {
+          gameActive = false;
+          finalScoreEl.textContent = score;
+          modalEl.classList.add('open');
+          return;
+        }
+
+        if (pipe.x + pipe.w < bird.x && !pipe.scored) {
+          pipe.scored = true;
+          score++;
+          scoreEl.textContent = score;
+        }
+      }
+
+      pipes = pipes.filter(p => !p.isOutOfBounds());
+
+      if (bird.y + bird.r > canvas.height || bird.y - bird.r < 0) {
+        gameActive = false;
+        finalScoreEl.textContent = score;
+        modalEl.classList.add('open');
+      }
+
+      if (Math.random() < 0.02) {
+        pipes.push(new Pipe());
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#87CEEB';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let pipe of pipes) {
+        pipe.draw(ctx);
+      }
+
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = Math.min((now - lastFrame) / 1000, 0.033);
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', () => {
+      if (gameActive) bird.vy = flapPower;
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

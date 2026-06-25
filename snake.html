@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #1abc9c, #16a085); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #000; border-radius: 10px; display: block; margin: 15px 0; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #1abc9c; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #1abc9c; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🐍 Snake</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Use arrow keys to move!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Score: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
+
+    const gridSize = 20;
+    let snake = [{ x: 10, y: 10 }];
+    let food = { x: 15, y: 15 };
+    let direction = { x: 1, y: 0 };
+    let nextDirection = { x: 1, y: 0 };
+    let score = 0;
+    let gameActive = true;
+    let lastMoveTime = 0;
+    const moveInterval = 100;
+
+    function update(dt) {
+      const now = Date.now();
+      if (now - lastMoveTime < moveInterval) return;
+      lastMoveTime = now;
+
+      direction = nextDirection;
+      const head = snake[snake.length - 1];
+      const newHead = {
+        x: (head.x + direction.x + Math.floor(canvas.width / gridSize)) % Math.floor(canvas.width / gridSize),
+        y: (head.y + direction.y + Math.floor(canvas.height / gridSize)) % Math.floor(canvas.height / gridSize)
+      };
+
+      // Check collision with self
+      for (let seg of snake) {
+        if (seg.x === newHead.x && seg.y === newHead.y) {
+          gameActive = false;
+          finalScoreEl.textContent = score;
+          modalEl.classList.add('open');
+          return;
+        }
+      }
+
+      snake.push(newHead);
+
+      if (newHead.x === food.x && newHead.y === food.y) {
+        score += 10;
+        scoreEl.textContent = score;
+        food = {
+          x: Math.floor(Math.random() * Math.floor(canvas.width / gridSize)),
+          y: Math.floor(Math.random() * Math.floor(canvas.height / gridSize))
+        };
+      } else {
+        snake.shift();
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw snake
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === snake.length - 1 ? '#00FF00' : '#00AA00';
+        ctx.fillRect(snake[i].x * gridSize + 1, snake[i].y * gridSize + 1, gridSize - 2, gridSize - 2);
+      }
+
+      // Draw food
+      ctx.fillStyle = '#FF0000';
+      ctx.beginPath();
+      ctx.arc((food.x + 0.5) * gridSize, (food.y + 0.5) * gridSize, gridSize / 2 - 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function gameLoop() {
+      if (gameActive) update(0);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' && direction.y === 0) nextDirection = { x: 0, y: -1 };
+      if (e.key === 'ArrowDown' && direction.y === 0) nextDirection = { x: 0, y: 1 };
+      if (e.key === 'ArrowLeft' && direction.x === 0) nextDirection = { x: -1, y: 0 };
+      if (e.key === 'ArrowRight' && direction.x === 0) nextDirection = { x: 1, y: 0 };
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

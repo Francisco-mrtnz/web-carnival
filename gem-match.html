@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gem Match</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #667eea, #764ba2); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #2a2a4a; border-radius: 10px; display: block; margin: 15px 0; cursor: pointer; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #667eea; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #667eea; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>💎 Gem Match</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+        <span>Time: <span id="timer">45</span>s</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Match 3+ gems vertically/horizontally!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Time's Up!</h2>
+      <p>Score: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const finalScoreEl = document.getElementById('finalScore');
+    const modalEl = document.getElementById('modal');
+
+    const gridSize = 6;
+    const gemSize = 70;
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
+    let grid = [];
+    let score = 0;
+    let timeLeft = 45;
+    let gameActive = true;
+    let startTime = Date.now();
+    let lastFrame = Date.now();
+    let selectedGem = null;
+
+    function initGrid() {
+      grid = [];
+      for (let i = 0; i < gridSize; i++) {
+        grid[i] = [];
+        for (let j = 0; j < gridSize; j++) {
+          grid[i][j] = colors[Math.floor(Math.random() * colors.length)];
+        }
+      }
+    }
+
+    function checkMatches() {
+      let matches = new Set();
+
+      // Horizontal
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize - 2; j++) {
+          if (grid[i][j] === grid[i][j + 1] && grid[i][j] === grid[i][j + 2]) {
+            matches.add(i * gridSize + j);
+            matches.add(i * gridSize + j + 1);
+            matches.add(i * gridSize + j + 2);
+          }
+        }
+      }
+
+      // Vertical
+      for (let i = 0; i < gridSize - 2; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          if (grid[i][j] === grid[i + 1][j] && grid[i][j] === grid[i + 2][j]) {
+            matches.add(i * gridSize + j);
+            matches.add((i + 1) * gridSize + j);
+            matches.add((i + 2) * gridSize + j);
+          }
+        }
+      }
+
+      if (matches.size > 0) {
+        score += matches.size * 10;
+        scoreEl.textContent = score;
+        for (let match of matches) {
+          const i = Math.floor(match / gridSize);
+          const j = match % gridSize;
+          grid[i][j] = colors[Math.floor(Math.random() * colors.length)];
+        }
+      }
+    }
+
+    function swap(r1, c1, r2, c2) {
+      [grid[r1][c1], grid[r2][c2]] = [grid[r2][c2], grid[r1][c1]];
+      checkMatches();
+    }
+
+    function getGemAt(x, y) {
+      const col = Math.floor(x / gemSize);
+      const row = Math.floor(y / gemSize);
+      if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
+        return { row, col };
+      }
+      return null;
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      timeLeft = Math.max(0, 45 - elapsed);
+      timerEl.textContent = timeLeft;
+
+      if (timeLeft === 0) {
+        gameActive = false;
+        finalScoreEl.textContent = score;
+        modalEl.classList.add('open');
+      }
+
+      checkMatches();
+    }
+
+    function draw() {
+      ctx.fillStyle = '#2a2a4a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.translate(50, 60);
+
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          const x = j * gemSize;
+          const y = i * gemSize;
+
+          ctx.fillStyle = grid[i][j];
+          ctx.beginPath();
+          ctx.arc(x + gemSize / 2, y + gemSize / 2, gemSize / 2 - 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (selectedGem && selectedGem.row === i && selectedGem.col === j) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (!gameActive) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) * (canvas.width / rect.width) - 50);
+      const y = ((e.clientY - rect.top) * (canvas.height / rect.height) - 60);
+
+      const gem = getGemAt(x, y);
+      if (!gem) return;
+
+      if (!selectedGem) {
+        selectedGem = gem;
+      } else if (selectedGem.row === gem.row && selectedGem.col === gem.col) {
+        selectedGem = null;
+      } else if ((Math.abs(selectedGem.row - gem.row) === 1 && selectedGem.col === gem.col) ||
+                 (Math.abs(selectedGem.col - gem.col) === 1 && selectedGem.row === gem.row)) {
+        swap(selectedGem.row, selectedGem.col, gem.row, gem.col);
+        selectedGem = null;
+      }
+    });
+
+    initGrid();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

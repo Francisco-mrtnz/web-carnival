@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spray the Target</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      margin: 0; 
+      min-height: 100vh; 
+      font-family: "Trebuchet MS", Verdana, sans-serif; 
+      color: #fff;
+      background: linear-gradient(135deg, #00d2ff 0%, #0099ff 50%, #6600ff 100%);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .container {
+      width: min(980px, 100%);
+      background: rgba(0,0,0,0.3);
+      border-radius: 20px;
+      border: 3px solid #fff;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    h1 { margin: 0; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .stats {
+      display: flex;
+      gap: 15px;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #fff9e6 0%, #ffe5cc 100%);
+      border-radius: 10px;
+      display: block;
+      margin: 15px 0;
+      border: 2px solid rgba(0,0,0,0.1);
+    }
+    .info {
+      text-align: center;
+      font-weight: bold;
+      margin: 10px 0;
+      font-size: 1rem;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      font-weight: bold;
+    }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal.open { display: flex; }
+    .modal-content {
+      background: #fff;
+      border-radius: 15px;
+      padding: 30px;
+      text-align: center;
+      color: #333;
+      max-width: 400px;
+    }
+    .modal-content h2 { margin: 0 0 15px; color: #00d2ff; font-size: 1.8rem; }
+    .modal-content p { margin: 10px 0; font-size: 1.2rem; font-weight: bold; }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: 0;
+      border-radius: 10px;
+      background: #00d2ff;
+      color: #000;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>💦 Spray the Target</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+        <span>Time: <span id="timer">45</span>s</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="info">Click targets to score! Bigger targets = more points!</div>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Goal: 1000 pts</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Final Score: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
+
+    let score = 0;
+    let timeLeft = 45;
+    let gameActive = true;
+    let targets = [];
+    let startTime = Date.now();
+    let lastFrame = Date.now();
+
+    class Target {
+      constructor() {
+        const sizeClass = Math.random();
+        if (sizeClass < 0.5) {
+          this.r = 30;
+          this.points = 10;
+          this.color = '#ff6b6b';
+        } else if (sizeClass < 0.8) {
+          this.r = 20;
+          this.points = 25;
+          this.color = '#4ecdc4';
+        } else {
+          this.r = 15;
+          this.points = 50;
+          this.color = '#f9ca24';
+        }
+        this.x = Math.random() * (canvas.width - 100) + 50;
+        this.y = Math.random() * (canvas.height - 100) + 50;
+        this.createdAt = Date.now();
+        this.lifetime = 3000;
+      }
+
+      draw(ctx) {
+        const age = Date.now() - this.createdAt;
+        const alpha = Math.max(0, 1 - age / this.lifetime);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      isExpired() {
+        return Date.now() - this.createdAt > this.lifetime;
+      }
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      timeLeft = Math.max(0, 45 - elapsed);
+      timerEl.textContent = timeLeft;
+
+      if (timeLeft === 0) {
+        gameActive = false;
+        finalScoreEl.textContent = score;
+        modalEl.classList.add('open');
+        return;
+      }
+
+      targets = targets.filter(t => !t.isExpired());
+
+      if (Math.random() < 0.1 && targets.length < 6) {
+        targets.push(new Target());
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#fff9e6';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let target of targets) {
+        target.draw(ctx);
+      }
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (!gameActive) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      for (let i = targets.length - 1; i >= 0; i--) {
+        const target = targets[i];
+        const dx = x - target.x;
+        const dy = y - target.y;
+        if (Math.sqrt(dx * dx + dy * dy) < target.r) {
+          score += target.points;
+          scoreEl.textContent = score;
+          targets.splice(i, 1);
+          break;
+        }
+      }
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

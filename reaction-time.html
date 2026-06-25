@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reaction Time</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #FF6B6B, #FFE66D); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #fff; border-radius: 10px; display: block; margin: 15px 0; cursor: pointer; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #FF6B6B; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #FF6B6B; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚡ Reaction Time</h1>
+      <div class="stats">
+        <span>Avg: <span id="score">--</span>ms</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Wait for green, click as fast as you can!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2 id="resultText">Round Over!</h2>
+      <p id="resultMsg">Time: <span id="finalScore">0</span>ms</p>
+      <button onclick="nextRound()">Next Round</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const resultTextEl = document.getElementById('resultText');
+    const resultMsgEl = document.getElementById('resultMsg');
+    const finalScoreEl = document.getElementById('finalScore');
+    const modalEl = document.getElementById('modal');
+
+    let gameState = 'waiting'; // waiting, ready, playing
+    let startTime = 0;
+    let times = [];
+    let roundCount = 0;
+    const maxRounds = 5;
+    let lastFrame = Date.now();
+
+    function start() {
+      gameState = 'waiting';
+      startTime = Date.now();
+    }
+
+    function update() {
+      const now = Date.now();
+
+      if (gameState === 'waiting') {
+        const elapsed = now - startTime;
+        if (elapsed > 2000) {
+          gameState = 'ready';
+          startTime = now;
+        }
+      } else if (gameState === 'ready') {
+        const elapsed = now - startTime;
+        if (elapsed > Math.random() * 2000 + 500) {
+          gameState = 'playing';
+          startTime = now;
+        }
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+
+      if (gameState === 'waiting') {
+        ctx.fillStyle = '#FF6B6B';
+        ctx.fillRect(350, 150, 220, 220);
+        ctx.fillStyle = '#000';
+        ctx.fillText('WAIT...', 460, 270);
+      } else if (gameState === 'ready') {
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(350, 150, 220, 220);
+        ctx.fillStyle = '#000';
+        ctx.fillText('WAIT...', 460, 270);
+      } else if (gameState === 'playing') {
+        ctx.fillStyle = '#00FF00';
+        ctx.fillRect(350, 150, 220, 220);
+        ctx.fillStyle = '#000';
+        ctx.fillText('CLICK!', 460, 270);
+      }
+
+      ctx.fillStyle = '#000';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Round: ${roundCount}/${maxRounds}`, 20, 30);
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function nextRound() {
+      modalEl.classList.remove('open');
+      roundCount++;
+      if (roundCount >= maxRounds) {
+        const avgTime = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+        scoreEl.textContent = avgTime;
+        resultTextEl.textContent = avgTime < 200 ? '🚀 Lightning Fast!' : avgTime < 300 ? '⚡ Great!' : '👍 Good!';
+        resultMsgEl.innerHTML = `Average: <span id="finalScore">${avgTime}</span>ms`;
+        finalScoreEl.textContent = avgTime;
+        setTimeout(() => {
+          modalEl.classList.add('open');
+        }, 500);
+      } else {
+        start();
+      }
+    }
+
+    canvas.addEventListener('click', () => {
+      if (gameState === 'playing') {
+        const reactionTime = Date.now() - startTime;
+        times.push(reactionTime);
+        finalScoreEl.textContent = reactionTime;
+        resultTextEl.textContent = reactionTime < 200 ? '🚀 Super fast!' : reactionTime < 300 ? '⚡ Nice!' : '👍 Good!';
+        gameState = 'waiting';
+        modalEl.classList.add('open');
+      } else if (gameState === 'waiting' || gameState === 'ready') {
+        resultTextEl.textContent = '❌ Too early!';
+        resultMsgEl.innerHTML = 'You clicked too early!';
+        gameState = 'waiting';
+        modalEl.classList.add('open');
+      }
+    });
+
+    start();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

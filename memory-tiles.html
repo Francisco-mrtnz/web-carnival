@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memory Tiles</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #fa709a, #fee140); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #333; border-radius: 10px; display: block; margin: 15px 0; cursor: pointer; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #fa709a; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #fa709a; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🧠 Memory Tiles</h1>
+      <div class="stats">
+        <span>Matched: <span id="score">0</span></span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Click tiles to find matching pairs!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Completed!</h2>
+      <p>Pairs Found: <span id="finalScore">0</span>/8</p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
+
+    let tiles = [];
+    let flipped = [];
+    let matched = 0;
+    let lastFrame = Date.now();
+
+    class Tile {
+      constructor(x, y, value) {
+        this.x = x;
+        this.y = y;
+        this.value = value;
+        this.flipped = false;
+        this.matched = false;
+        this.w = 100;
+        this.h = 100;
+      }
+
+      contains(x, y) {
+        return x > this.x && x < this.x + this.w && y > this.y && y < this.y + this.h;
+      }
+
+      draw(ctx) {
+        if (this.matched) return;
+
+        ctx.fillStyle = this.flipped ? '#FFD700' : '#4a4a4a';
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+
+        if (this.flipped) {
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 30px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(['🌟', '🎈', '🎪', '🎭', '🎨', '🎬', '🎮', '🎲'][this.value], this.x + this.w / 2, this.y + this.h / 2);
+        }
+      }
+    }
+
+    const values = [0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7];
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+        const val = values.splice(Math.floor(Math.random() * values.length), 1)[0];
+        tiles.push(new Tile(50 + j * 220, 100 + i * 110, val));
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#333';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let tile of tiles) {
+        tile.draw(ctx);
+      }
+    }
+
+    function gameLoop() {
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', (e) => {
+      if (matched === 8) return;
+      if (flipped.length >= 2) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      for (let tile of tiles) {
+        if (tile.contains(x, y) && !tile.flipped && !tile.matched) {
+          tile.flipped = true;
+          flipped.push(tile);
+
+          if (flipped.length === 2) {
+            if (flipped[0].value === flipped[1].value) {
+              flipped[0].matched = true;
+              flipped[1].matched = true;
+              matched++;
+              scoreEl.textContent = matched;
+              flipped = [];
+
+              if (matched === 8) {
+                finalScoreEl.textContent = '8';
+                modalEl.classList.add('open');
+              }
+            } else {
+              setTimeout(() => {
+                flipped[0].flipped = false;
+                flipped[1].flipped = false;
+                flipped = [];
+              }, 800);
+            }
+          }
+          break;
+        }
+      }
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

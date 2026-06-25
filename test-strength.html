@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Your Strength</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #f093fb, #f5576c); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #8b7355; border-radius: 10px; display: block; margin: 15px 0; cursor: pointer; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #f5576c; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #f5576c; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>💪 Test Your Strength</h1>
+      <div class="stats">
+        <span>Power: <span id="power">0</span>%</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Click to build power! Release to hit!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Done!</h2>
+      <p>Power Reached: <span id="finalScore">0</span>%</p>
+      <button onclick="location.reload()">Try Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const powerEl = document.getElementById('power');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
+
+    let power = 0;
+    let maxPower = 0;
+    let charging = false;
+    let chargingPower = 0;
+    let gameOver = false;
+
+    function draw() {
+      ctx.fillStyle = '#8b7355';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw power meter
+      ctx.fillStyle = '#333';
+      ctx.fillRect(100, 200, 720, 60);
+      ctx.fillStyle = '#00ff00';
+      ctx.fillRect(100, 200, (power / 100) * 720, 60);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(100, 200, 720, 60);
+
+      // Draw power text
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 30px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${power}%`, 460, 235);
+
+      // Draw hammer
+      ctx.fillStyle = '#654321';
+      ctx.fillRect(420, 100 - power * 1.5, 80, 100);
+      ctx.fillStyle = '#333';
+      ctx.fillRect(440, 50 - power * 1.5, 40, 50);
+
+      // Draw bell
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(460, 400, 50, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw bell indicator
+      if (power < 30) {
+        ctx.fillStyle = '#FF0000';
+        ctx.fillText('😡', 460, 330);
+      } else if (power < 60) {
+        ctx.fillStyle = '#FFA500';
+        ctx.fillText('😐', 460, 330);
+      } else if (power < 90) {
+        ctx.fillStyle = '#90EE90';
+        ctx.fillText('😊', 460, 330);
+      } else {
+        ctx.fillStyle = '#00FF00';
+        ctx.fillText('🤯', 460, 330);
+      }
+    }
+
+    function gameLoop() {
+      if (!gameOver && charging) {
+        chargingPower += 1.5;
+        if (chargingPower > 100) chargingPower = 100;
+        power = chargingPower;
+        powerEl.textContent = Math.round(power);
+      }
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('mousedown', () => {
+      if (!gameOver) {
+        charging = true;
+        chargingPower = 0;
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      if (charging) {
+        charging = false;
+        maxPower = Math.max(maxPower, power);
+        gameOver = true;
+        finalScoreEl.textContent = Math.round(power);
+        modalEl.classList.add('open');
+      }
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

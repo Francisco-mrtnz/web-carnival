@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maze Race</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", Verdana, sans-serif; color: #fff; background: linear-gradient(135deg, #2E8B57, #228B22); display: grid; place-items: center; padding: 20px; }
+    .container { width: min(980px, 100%); background: rgba(0,0,0,0.3); border-radius: 20px; border: 3px solid #fff; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    h1 { margin: 0; font-size: 2rem; }
+    .stats { display: flex; gap: 15px; font-weight: bold; }
+    canvas { width: 100%; height: auto; background: #fff; border-radius: 10px; display: block; margin: 15px 0; cursor: crosshair; }
+    .footer { display: flex; justify-content: space-between; gap: 15px; font-weight: bold; }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-content { background: #fff; border-radius: 15px; padding: 30px; text-align: center; color: #333; max-width: 400px; }
+    .modal-content h2 { margin: 0 0 15px; color: #2E8B57; }
+    button { margin-top: 20px; padding: 10px 20px; font-size: 1rem; font-weight: bold; border: 0; border-radius: 10px; background: #2E8B57; color: #fff; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🌀 Maze Race</h1>
+      <div class="stats">
+        <span>Time: <span id="timer">0.0</span>s</span>
+      </div>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Navigate the maze!</span>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>You Won!</h2>
+      <p>Time: <span id="finalScore">0.0</span>s</p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const timerEl = document.getElementById('timer');
+    const finalScoreEl = document.getElementById('finalScore');
+    const modalEl = document.getElementById('modal');
+
+    let ball = { x: 50, y: 260, r: 10, vx: 0, vy: 0 };
+    let goal = { x: 870, y: 260, r: 15 };
+    let gameActive = true;
+    let startTime = Date.now();
+    let lastFrame = Date.now();
+    let mouseX = 460;
+    let mouseY = 260;
+
+    const walls = [
+      { x: 100, y: 100, w: 200, h: 20 },
+      { x: 300, y: 150, w: 20, h: 150 },
+      { x: 200, y: 300, w: 150, h: 20 },
+      { x: 450, y: 80, w: 20, h: 200 },
+      { x: 550, y: 250, w: 150, h: 20 },
+      { x: 700, y: 150, w: 20, h: 200 },
+      { x: 200, y: 450, w: 300, h: 20 },
+      { x: 550, y: 400, w: 20, h: 100 },
+    ];
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      const dx = mouseX - ball.x;
+      const dy = mouseY - ball.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > 0) {
+        const speed = 200;
+        ball.vx = (dx / dist) * speed;
+        ball.vy = (dy / dist) * speed;
+      }
+
+      ball.x += ball.vx * dt;
+      ball.y += ball.vy * dt;
+
+      // Wall collisions
+      for (let wall of walls) {
+        if (ball.x + ball.r > wall.x && ball.x - ball.r < wall.x + wall.w &&
+            ball.y + ball.r > wall.y && ball.y - ball.r < wall.y + wall.h) {
+          ball.x = Math.max(wall.x + wall.w + ball.r, Math.min(wall.x - ball.r, ball.x));
+          ball.y = Math.max(wall.y + wall.h + ball.r, Math.min(wall.y - ball.r, ball.y));
+        }
+      }
+
+      // Canvas boundaries
+      ball.x = Math.max(ball.r, Math.min(canvas.width - ball.r, ball.x));
+      ball.y = Math.max(ball.r, Math.min(canvas.height - ball.r, ball.y));
+
+      // Check goal
+      const gdx = ball.x - goal.x;
+      const gdy = ball.y - goal.y;
+      if (Math.sqrt(gdx * gdx + gdy * gdy) < ball.r + goal.r) {
+        gameActive = false;
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        finalScoreEl.textContent = elapsedTime;
+        modalEl.classList.add('open');
+      }
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      timerEl.textContent = elapsed;
+    }
+
+    function draw() {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Walls
+      ctx.fillStyle = '#000';
+      for (let wall of walls) {
+        ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+      }
+
+      // Goal
+      ctx.fillStyle = '#00FF00';
+      ctx.beginPath();
+      ctx.arc(goal.x, goal.y, goal.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Ball
+      ctx.fillStyle = '#FF6B6B';
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = Math.min((now - lastFrame) / 1000, 0.033);
+      lastFrame = now;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+    });
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
