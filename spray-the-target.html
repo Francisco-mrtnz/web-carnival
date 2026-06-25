@@ -6,12 +6,12 @@
   <title>Spray the Target</title>
   <style>
     :root {
-      --bg1: #ffe8a6;
-      --bg2: #ffb576;
-      --bg3: #cd5e41;
+      --bg1: #c6efff;
+      --bg2: #79c7ff;
+      --bg3: #2f8ac2;
       --ink: #231937;
-      --panel: rgba(255, 248, 230, 0.92);
-      --accent: #c6283d;
+      --panel: rgba(235, 250, 255, 0.92);
+      --accent: #2270a7;
     }
 
     * {
@@ -26,8 +26,8 @@
       margin: 0;
       font-family: "Trebuchet MS", "Verdana", sans-serif;
       color: var(--ink);
-      background: radial-gradient(circle at 15% 18%, #fff3bf, transparent 34%),
-                  radial-gradient(circle at 84% 22%, #ffd0ad, transparent 38%),
+      background: radial-gradient(circle at 15% 18%, #e8fbff, transparent 34%),
+          radial-gradient(circle at 84% 22%, #b7e5ff, transparent 38%),
                   linear-gradient(160deg, var(--bg1), var(--bg2) 42%, var(--bg3));
       padding: 18px;
       display: grid;
@@ -334,8 +334,17 @@
     let musicTimer = null;
     let rhythmStep = 0;
 
-    const melody = [392, 440, 523.25, 440, 392, 349.23, 392, 440];
-    const bass = [130.81, null, 130.81, null, 146.83, null, 123.47, null];
+    const melody = [523.25, 659.25, 698.46, 783.99, 698.46, 659.25, 587.33, 659.25];
+    const bass = [164.81, null, 196, null, 174.61, null, 146.83, null];
+
+    function makeSprite(width, height, painter) {
+      const sprite = document.createElement("canvas");
+      sprite.width = width;
+      sprite.height = height;
+      const sctx = sprite.getContext("2d");
+      painter(sctx, width, height);
+      return sprite;
+    }
 
     class Target {
       constructor() {
@@ -355,6 +364,22 @@
           5: "#f39c12"   // Orange
         };
         this.color = colors[this.pointValue];
+        this.sprite = makeSprite(84, 84, (sctx, w, h) => {
+          sctx.strokeStyle = this.color;
+          sctx.lineWidth = 6;
+          sctx.beginPath();
+          sctx.arc(w / 2, h / 2, 26, 0, Math.PI * 2);
+          sctx.stroke();
+          sctx.strokeStyle = "#fff";
+          sctx.lineWidth = 3;
+          sctx.beginPath();
+          sctx.arc(w / 2, h / 2, 18, 0, Math.PI * 2);
+          sctx.stroke();
+          sctx.fillStyle = this.color;
+          sctx.beginPath();
+          sctx.arc(w / 2, h / 2, 9, 0, Math.PI * 2);
+          sctx.fill();
+        });
       }
 
       isExpired(now) {
@@ -369,24 +394,7 @@
         const age = this.getAge(performance.now());
         const progress = age / this.duration;
         
-        // Outer circle
-        ctx.beginPath();
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = 4;
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Inner circles
-        ctx.beginPath();
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 2;
-        ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.fillStyle = this.color;
-        ctx.arc(this.x, this.y, this.radius * 0.3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.drawImage(this.sprite, this.x - 42, this.y - 42);
 
         // Fade out effect near end of life
         if (progress > 0.7) {
@@ -430,12 +438,22 @@
         const radius = targetRadius * (1 + progress * 1.5);
         const opacity = 1 - progress;
 
-        // Colored splash circles
+        // Colored splash sprite
         ctx.globalAlpha = opacity * 0.8;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
-        ctx.fill();
+        const splashSprite = makeSprite(80, 80, (sctx, w, h) => {
+          sctx.fillStyle = this.color;
+          for (let i = 0; i < 8; i++) {
+            const a = (Math.PI * 2 * i) / 8;
+            sctx.beginPath();
+            sctx.arc(w / 2 + Math.cos(a) * 20, h / 2 + Math.sin(a) * 20, 8, 0, Math.PI * 2);
+            sctx.fill();
+          }
+          sctx.fillStyle = "#fff";
+          sctx.beginPath();
+          sctx.arc(w / 2, h / 2, 10, 0, Math.PI * 2);
+          sctx.fill();
+        });
+        ctx.drawImage(splashSprite, this.x - radius, this.y - radius, radius * 2, radius * 2);
 
         // Inner white splash
         ctx.globalAlpha = opacity * 0.5;
@@ -552,6 +570,11 @@
       ctx.fillStyle = "#c42b40";
       for (let i = 0; i < canvas.width; i += 64) {
         ctx.fillRect(i, 0, 32, 86);
+      }
+
+      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      for (let i = 0; i < 9; i++) {
+        ctx.fillRect(90 + i * 90, 94 + (i % 2) * 8, 26, 6);
       }
     }
 

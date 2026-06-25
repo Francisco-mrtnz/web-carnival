@@ -6,12 +6,12 @@
   <title>Pinball</title>
   <style>
     :root {
-      --bg1: #ffe8a6;
-      --bg2: #ffb576;
-      --bg3: #cd5e41;
+      --bg1: #ffd8ff;
+      --bg2: #b58dff;
+      --bg3: #5e4ab4;
       --ink: #231937;
-      --panel: rgba(255, 248, 230, 0.92);
-      --accent: #c6283d;
+      --panel: rgba(246, 241, 255, 0.92);
+      --accent: #7b34c4;
       --throw-fill: #2f6db2;
       --throw-track: #d8e6f7;
     }
@@ -28,8 +28,8 @@
       margin: 0;
       font-family: "Trebuchet MS", "Verdana", sans-serif;
       color: var(--ink);
-      background: radial-gradient(circle at 15% 18%, #fff3bf, transparent 34%),
-                  radial-gradient(circle at 84% 22%, #ffd0ad, transparent 38%),
+      background: radial-gradient(circle at 15% 18%, #ffe2ff, transparent 34%),
+          radial-gradient(circle at 84% 22%, #c5b9ff, transparent 38%),
                   linear-gradient(160deg, var(--bg1), var(--bg2) 42%, var(--bg3));
       padding: 18px;
       display: grid;
@@ -384,8 +384,30 @@
     let musicTimer = null;
     let rhythmStep = 0;
 
-    const melody = [392, 440, 523.25, 440, 392, 349.23, 392, 440];
-    const bass = [130.81, null, 130.81, null, 146.83, null, 123.47, null];
+    const melody = [329.63, 392, 493.88, 523.25, 493.88, 392, 440, 493.88];
+    const bass = [98, null, 123.47, null, 110, null, 82.41, null];
+
+    function makeSprite(width, height, painter) {
+      const sprite = document.createElement("canvas");
+      sprite.width = width;
+      sprite.height = height;
+      const sctx = sprite.getContext("2d");
+      painter(sctx, width, height);
+      return sprite;
+    }
+
+    const ballSprite = makeSprite(26, 26, (sctx, w, h) => {
+      const grad = sctx.createRadialGradient(8, 8, 2, w / 2, h / 2, 12);
+      grad.addColorStop(0, "#d6ecff");
+      grad.addColorStop(1, "#3a78ba");
+      sctx.fillStyle = grad;
+      sctx.beginPath();
+      sctx.arc(w / 2, h / 2, 10, 0, Math.PI * 2);
+      sctx.fill();
+      sctx.strokeStyle = "rgba(255,255,255,0.9)";
+      sctx.lineWidth = 2;
+      sctx.stroke();
+    });
 
     class Cup {
       constructor(x, y, score, color) {
@@ -394,23 +416,28 @@
         this.radius = cupRadius;
         this.score = score;
         this.color = color;
+        this.sprite = makeSprite(58, 58, (sctx, w, h) => {
+          sctx.fillStyle = color;
+          sctx.beginPath();
+          sctx.arc(w / 2, h / 2, 22, 0, Math.PI * 2);
+          sctx.fill();
+          sctx.strokeStyle = "#fff";
+          sctx.lineWidth = 3;
+          sctx.stroke();
+          sctx.fillStyle = "rgba(255,255,255,0.25)";
+          sctx.beginPath();
+          sctx.arc(w / 2 - 7, h / 2 - 9, 8, 0, Math.PI * 2);
+          sctx.fill();
+          sctx.fillStyle = "#fff";
+          sctx.font = "bold 14px Verdana";
+          sctx.textAlign = "center";
+          sctx.textBaseline = "middle";
+          sctx.fillText(String(score), w / 2, h / 2);
+        });
       }
 
       draw(ctx) {
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 14px Verdana";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(this.score, this.x, this.y);
+        ctx.drawImage(this.sprite, this.x - 29, this.y - 29);
       }
 
       contains(x, y) {
@@ -505,14 +532,7 @@
       }
 
       draw(ctx) {
-        ctx.fillStyle = "#4f90d5";
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.strokeStyle = "rgba(255,255,255,0.7)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        ctx.drawImage(ballSprite, this.x - 13, this.y - 13);
       }
 
       isOutOfBounds() {
@@ -622,6 +642,14 @@
       ctx.fillStyle = "#c42b40";
       for (let i = 0; i < canvas.width; i += 64) {
         ctx.fillRect(i, 0, 32, 86);
+      }
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+      for (let i = 0; i < 7; i++) {
+        const x = 90 + i * 120;
+        ctx.beginPath();
+        ctx.arc(x, 102, 10, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 

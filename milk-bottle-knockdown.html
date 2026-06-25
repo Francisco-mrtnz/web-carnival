@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Milk Bottle Knockdown</title>
+  <style>
+    :root { --ink: #2e1f14; --panel: rgba(255, 244, 223, .94); --accent: #9a3f23; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", "Verdana", sans-serif; color: var(--ink); background: radial-gradient(circle at 16% 16%, #f6d7a8, transparent 30%), radial-gradient(circle at 82% 24%, #dfad79, transparent 35%), linear-gradient(160deg, #f2c489, #ce8f58 46%, #8a5634); display: grid; place-items: center; padding: 18px; }
+    .app { width: min(980px, 100%); background: var(--panel); border: 4px solid #fff; border-radius: 20px; box-shadow: 0 12px 24px rgba(20, 16, 35, .25); padding: 16px; }
+    .top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    h1 { margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+    .hud { display: flex; gap: 8px; flex-wrap: wrap; font-weight: 700; }
+    .pill { background: #fff; border: 2px solid rgba(47,109,178,.3); border-radius: 999px; padding: 6px 10px; }
+    canvas { width: 100%; height: auto; display: block; border-radius: 14px; border: 3px solid rgba(33,26,52,.18); background: linear-gradient(180deg, #ffd8a4 0%, #ef9b68 45%, #9b643f 100%); }
+    .meta { margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-weight: 700; color: #3c3258; }
+    .link { color: #224f87; text-decoration: none; border-bottom: 2px solid rgba(34,79,135,.35); }
+    .overlay { position: fixed; inset: 0; background: rgba(16,12,26,.66); display: none; place-items: center; padding: 16px; }
+    .overlay.open { display: grid; }
+    .card { background: #fff4dc; border: 3px solid #fff; border-radius: 14px; padding: 14px; text-align: center; width: min(420px, 100%); }
+    .btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; background: #ffce48; color: #2f2a46; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="top">
+      <h1>Milk Bottle Knockdown</h1>
+      <div class="hud">
+        <span class="pill">Knocked: <span id="knocked">0</span>/6</span>
+        <span class="pill">Throws: <span id="throws">7</span></span>
+        <span class="pill">Goal: 4 bottles</span>
+      </div>
+    </section>
+    <canvas id="gameCanvas" width="920" height="520" aria-label="Milk bottle knockdown game"></canvas>
+    <section class="meta">
+      <span id="status">Drag from the baseball and release.</span>
+      <a class="link" href="empty.html">Back to Midway</a>
+    </section>
+  </main>
+
+  <div class="overlay" id="overlay" aria-live="polite">
+    <div class="card">
+      <h2 id="resultTitle">Round Over</h2>
+      <p>Bottles knocked: <strong id="finalCount">0</strong></p>
+      <button class="btn" id="restartBtn" type="button">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const knockedEl = document.getElementById("knocked");
+    const throwsEl = document.getElementById("throws");
+    const statusEl = document.getElementById("status");
+    const overlay = document.getElementById("overlay");
+    const resultTitle = document.getElementById("resultTitle");
+    const finalCount = document.getElementById("finalCount");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const gravity = 820;
+    const bottleR = 18;
+    const ballR = 13;
+    const start = { x: 120, y: 428 };
+
+    let bottles = [];
+    let ball = null;
+    let throwsLeft = 7;
+    let knocked = 0;
+    let ended = false;
+    let dragging = false;
+    let dragPos = null;
+    let lastTime = performance.now();
+
+    let audioCtx = null;
+    let musicTimer = null;
+    let beatStep = 0;
+    const melody = [293.66, 349.23, 440, 392, 349.23, 329.63, 293.66, 246.94];
+    const bass = [98, null, 110, null, 87.31, null, 82.41, null];
+
+    function makeSprite(width, height, painter) {
+      const sprite = document.createElement("canvas");
+      sprite.width = width;
+      sprite.height = height;
+      const sctx = sprite.getContext("2d");
+      painter(sctx, width, height);
+      return sprite;
+    }
+
+    const bottleSprite = makeSprite(50, 50, (sctx, w, h) => {
+      sctx.fillStyle = "#f1e4d3";
+      sctx.beginPath();
+      sctx.arc(w / 2, h / 2, 18, 0, Math.PI * 2);
+      sctx.fill();
+      sctx.strokeStyle = "#715843";
+      sctx.lineWidth = 2;
+      sctx.stroke();
+      sctx.fillStyle = "#c5394a";
+      sctx.fillRect(w / 2 - 14, h / 2 - 4, 28, 8);
+    });
+
+    const ballSprite = makeSprite(34, 34, (sctx, w, h) => {
+      sctx.fillStyle = "#f2efe8";
+      sctx.beginPath();
+      sctx.arc(w / 2, h / 2, 13, 0, Math.PI * 2);
+      sctx.fill();
+      sctx.strokeStyle = "#8a7f73";
+      sctx.stroke();
+    });
+
+    function ensureAudio() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      if (!audioCtx) audioCtx = new AudioContextClass();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      if (!musicTimer) musicTimer = window.setInterval(playMusicStep, 300);
+    }
+
+    function beep(freq, duration, type, gainValue) {
+      if (!audioCtx || !freq) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playMusicStep() {
+      if (!audioCtx || audioCtx.state !== "running") return;
+      const tone = melody[beatStep % melody.length];
+      const low = bass[beatStep % bass.length];
+      beep(tone, 0.2, "triangle", 0.022);
+      if (low) beep(low, 0.24, "sine", 0.018);
+      beatStep = (beatStep + 1) % melody.length;
+    }
+
+    function makeStack() {
+      const baseY = 400;
+      const rows = [3, 2, 1];
+      const stack = [];
+      let rowY = baseY;
+      for (let r = 0; r < rows.length; r++) {
+        const count = rows[r];
+        const startX = 640 - ((count - 1) * 42) / 2;
+        for (let i = 0; i < count; i++) {
+          stack.push({
+            x: startX + i * 42,
+            y: rowY,
+            vx: 0,
+            vy: 0,
+            knocked: false,
+            settled: false
+          });
+        }
+        rowY -= 44;
+      }
+      return stack;
+    }
+
+    function resetGame() {
+      bottles = makeStack();
+      ball = null;
+      throwsLeft = 7;
+      knocked = 0;
+      ended = false;
+      dragging = false;
+      dragPos = null;
+      overlay.classList.remove("open");
+      knockedEl.textContent = "0";
+      throwsEl.textContent = "7";
+      statusEl.textContent = "Drag from the baseball and release.";
+    }
+
+    function spawnBall(vx, vy) {
+      ball = { x: start.x, y: start.y, vx, vy, live: true };
+    }
+
+    function applyBottleCollisions() {
+      for (let i = 0; i < bottles.length; i++) {
+        for (let j = i + 1; j < bottles.length; j++) {
+          const a = bottles[i];
+          const b = bottles[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy);
+          const minD = bottleR * 2;
+          if (dist > 0 && dist < minD) {
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const overlap = (minD - dist) * 0.5;
+            a.x -= nx * overlap;
+            a.y -= ny * overlap;
+            b.x += nx * overlap;
+            b.y += ny * overlap;
+
+            const rvx = b.vx - a.vx;
+            const rvy = b.vy - a.vy;
+            const sep = rvx * nx + rvy * ny;
+            if (sep < 0) {
+              const impulse = -(1 + 0.25) * sep * 0.45;
+              a.vx -= impulse * nx;
+              a.vy -= impulse * ny;
+              b.vx += impulse * nx;
+              b.vy += impulse * ny;
+            }
+          }
+        }
+      }
+    }
+
+    function update(dt) {
+      if (ended) return;
+
+      if (ball && ball.live) {
+        ball.vy += gravity * dt;
+        ball.vx *= 0.998;
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
+
+        for (const b of bottles) {
+          const dx = b.x - ball.x;
+          const dy = b.y - ball.y;
+          const d = Math.hypot(dx, dy);
+          const minD = bottleR + ballR;
+          if (d > 0 && d < minD) {
+            const nx = dx / d;
+            const ny = dy / d;
+            const speed = Math.hypot(ball.vx, ball.vy);
+            b.vx += nx * speed * 0.35;
+            b.vy += ny * speed * 0.35;
+            ball.vx *= -0.22;
+            ball.vy *= -0.18;
+            ensureAudio();
+            beep(180, 0.07, "square", 0.08);
+          }
+        }
+
+        if (ball.y > 520 || ball.x > 980 || ball.x < -40) {
+          ball.live = false;
+          if (throwsLeft <= 0) endRound();
+        }
+      }
+
+      for (const b of bottles) {
+        b.vy += gravity * dt;
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+
+        if (b.y > 402) {
+          b.y = 402;
+          b.vy *= -0.14;
+          b.vx *= 0.86;
+        }
+
+        if (b.x < 480) { b.x = 480; b.vx *= -0.2; }
+        if (b.x > 820) { b.x = 820; b.vx *= -0.2; }
+
+        if (!b.knocked && (Math.abs(b.vx) > 80 || b.x < 540 || b.x > 740)) {
+          b.knocked = true;
+          knocked += 1;
+          knockedEl.textContent = String(knocked);
+        }
+      }
+
+      applyBottleCollisions();
+
+      if (throwsLeft <= 0 && (!ball || !ball.live)) {
+        endRound();
+      }
+    }
+
+    function endRound() {
+      ended = true;
+      finalCount.textContent = String(knocked);
+      resultTitle.textContent = knocked >= 4 ? "Jackpot Throwing" : "Try Again";
+      overlay.classList.add("open");
+    }
+
+    function drawBottle(b) {
+      ctx.save();
+      if (b.knocked) ctx.globalAlpha = 0.75;
+      ctx.drawImage(bottleSprite, b.x - 25, b.y - 25);
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#fff1d5";
+      ctx.fillRect(0, 0, canvas.width, 86);
+      ctx.fillStyle = "#ca2d43";
+      for (let i = 0; i < canvas.width; i += 64) ctx.fillRect(i, 0, 32, 86);
+
+      ctx.fillStyle = "#86553a";
+      ctx.fillRect(0, 430, canvas.width, 90);
+
+      ctx.fillStyle = "#6f482f";
+      ctx.fillRect(520, 404, 220, 14);
+
+      for (const b of bottles) drawBottle(b);
+
+      ctx.fillStyle = "#2f6db2";
+      ctx.beginPath();
+      ctx.arc(start.x, start.y, 38, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 13px Verdana";
+      ctx.textAlign = "center";
+      ctx.fillText("BALL", start.x, start.y + 4);
+
+      if (ball && ball.live) {
+        ctx.drawImage(ballSprite, ball.x - 17, ball.y - 17);
+      }
+
+      if (dragging && dragPos) {
+        ctx.strokeStyle = "rgba(26, 57, 121, 0.6)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(dragPos.x, dragPos.y);
+        ctx.stroke();
+      }
+    }
+
+    function loop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.033);
+      lastTime = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function toCanvas(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+        y: ((e.clientY - rect.top) / rect.height) * canvas.height
+      };
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+      if (ended || ball?.live || throwsLeft <= 0) return;
+      ensureAudio();
+      const p = toCanvas(e);
+      if (Math.hypot(p.x - start.x, p.y - start.y) > 44) return;
+      dragging = true;
+      dragPos = p;
+    });
+
+    canvas.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      dragPos = toCanvas(e);
+    });
+
+    canvas.addEventListener("pointerup", (e) => {
+      if (!dragging || ended || throwsLeft <= 0) return;
+      dragging = false;
+      const p = toCanvas(e);
+      const dx = start.x - p.x;
+      const dy = start.y - p.y;
+      const launchVy = Math.min(dy * 3.8 - 130, -260);
+      spawnBall(dx * 3.8, launchVy);
+      ensureAudio();
+      beep(420, 0.08, "square", 0.07);
+      throwsLeft -= 1;
+      throwsEl.textContent = String(throwsLeft);
+      dragPos = null;
+      statusEl.textContent = "Direct hit the center of the stack.";
+    });
+
+    restartBtn.addEventListener("click", resetGame);
+
+    resetGame();
+    draw();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

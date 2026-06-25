@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balloon Darts</title>
+  <style>
+    :root { --ink: #f5f2ff; --panel: rgba(32, 25, 58, .9); --accent: #ff5a8f; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", "Verdana", sans-serif; color: var(--ink); background: radial-gradient(circle at 16% 16%, #5f4ca8, transparent 30%), radial-gradient(circle at 82% 24%, #253f84, transparent 35%), linear-gradient(160deg, #271744, #3f236a 46%, #17213f); display: grid; place-items: center; padding: 18px; }
+    .app { width: min(980px, 100%); background: var(--panel); border: 4px solid #ff8dc1; border-radius: 20px; box-shadow: 0 12px 24px rgba(20, 16, 35, .45); padding: 16px; }
+    .top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    h1 { margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+    .hud { display: flex; gap: 8px; flex-wrap: wrap; font-weight: 700; }
+    .pill { background: rgba(255,255,255,0.12); border: 2px solid rgba(255,141,193,.45); border-radius: 999px; padding: 6px 10px; }
+    canvas { width: 100%; height: auto; display: block; border-radius: 14px; border: 3px solid rgba(33,26,52,.18); background: linear-gradient(180deg, #ffd8a4 0%, #ef9b68 45%, #9b643f 100%); }
+    .meta { margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-weight: 700; color: #3c3258; }
+    .link { color: #224f87; text-decoration: none; border-bottom: 2px solid rgba(34,79,135,.35); }
+    .overlay { position: fixed; inset: 0; background: rgba(16,12,26,.66); display: none; place-items: center; padding: 16px; }
+    .overlay.open { display: grid; }
+    .card { background: #fff4dc; border: 3px solid #fff; border-radius: 14px; padding: 14px; text-align: center; width: min(420px, 100%); }
+    .btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; background: #ffce48; color: #2f2a46; }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="top">
+      <h1>Balloon Darts</h1>
+      <div class="hud">
+        <span class="pill">Score: <span id="score">0</span></span>
+        <span class="pill">Time: <span id="timer">45</span>s</span>
+        <span class="pill">Goal: 320</span>
+      </div>
+    </section>
+    <canvas id="gameCanvas" width="920" height="520" aria-label="Balloon darts game"></canvas>
+    <section class="meta">
+      <span id="status">Click and drag from the dart tray to throw.</span>
+      <a class="link" href="empty.html">Back to Midway</a>
+    </section>
+  </main>
+
+  <div class="overlay" id="overlay" aria-live="polite">
+    <div class="card">
+      <h2 id="resultTitle">Round Over</h2>
+      <p>Final score: <strong id="finalScore">0</strong></p>
+      <button class="btn" id="restartBtn" type="button">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const timerEl = document.getElementById("timer");
+    const statusEl = document.getElementById("status");
+    const overlay = document.getElementById("overlay");
+    const resultTitle = document.getElementById("resultTitle");
+    const finalScore = document.getElementById("finalScore");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const tray = { x: 120, y: 428, r: 42 };
+    const gravity = 760;
+
+    let score = 0;
+    let timeLeft = 45;
+    let ended = false;
+    let balloons = [];
+    let dart = null;
+    let dragging = false;
+    let dragPos = null;
+    let startTime = 0;
+    let lastTime = performance.now();
+    let spawnTimer = 0;
+
+    let audioCtx = null;
+    let musicTimer = null;
+    let beatStep = 0;
+    const melody = [659.25, 783.99, 659.25, 523.25, 587.33, 698.46, 587.33, 523.25];
+    const bass = [164.81, null, 174.61, null, 146.83, null, 130.81, null];
+
+    function makeSprite(width, height, painter) {
+      const sprite = document.createElement("canvas");
+      sprite.width = width;
+      sprite.height = height;
+      const sctx = sprite.getContext("2d");
+      painter(sctx, width, height);
+      return sprite;
+    }
+
+    const dartSprite = makeSprite(56, 14, (sctx, w, h) => {
+      sctx.fillStyle = "#444";
+      sctx.fillRect(8, 5, 30, 4);
+      sctx.fillStyle = "#ff5a8f";
+      sctx.beginPath();
+      sctx.moveTo(42, 7);
+      sctx.lineTo(34, 2);
+      sctx.lineTo(34, 12);
+      sctx.closePath();
+      sctx.fill();
+      sctx.fillStyle = "#f2d0a0";
+      sctx.fillRect(0, 4, 8, 6);
+    });
+
+    function ensureAudio() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      if (!audioCtx) audioCtx = new AudioContextClass();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      if (!musicTimer) musicTimer = window.setInterval(playMusicStep, 260);
+    }
+
+    function beep(freq, duration, type, gainValue) {
+      if (!audioCtx || !freq) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playMusicStep() {
+      if (!audioCtx || audioCtx.state !== "running") return;
+      const tone = melody[beatStep % melody.length];
+      const low = bass[beatStep % bass.length];
+      beep(tone, 0.18, "square", 0.022);
+      if (low) beep(low, 0.2, "triangle", 0.018);
+      beatStep = (beatStep + 1) % melody.length;
+    }
+
+    function spawnBalloon() {
+      const lane = Math.floor(Math.random() * 6);
+      const y = 130 + lane * 58 + (Math.random() * 10 - 5);
+      const pts = [30, 40, 50, 60][Math.floor(Math.random() * 4)];
+      balloons.push({
+        x: 960,
+        y,
+        r: 22 + Math.random() * 8,
+        vx: -(70 + Math.random() * 45),
+        bob: Math.random() * Math.PI * 2,
+        points: pts,
+        color: ["#f04f57", "#3f8fe7", "#f8b93a", "#50b17b"][Math.floor(Math.random() * 4)]
+      });
+      const balloon = balloons[balloons.length - 1];
+      balloon.sprite = makeSprite(72, 90, (sctx, w, h) => {
+        sctx.fillStyle = balloon.color;
+        sctx.beginPath();
+        sctx.ellipse(w / 2, h / 2 - 6, 22, 26, 0, 0, Math.PI * 2);
+        sctx.fill();
+        sctx.strokeStyle = "rgba(255,255,255,.75)";
+        sctx.stroke();
+        sctx.strokeStyle = "#6b4c32";
+        sctx.beginPath();
+        sctx.moveTo(w / 2, h / 2 + 20);
+        sctx.lineTo(w / 2 + 8, h - 4);
+        sctx.stroke();
+      });
+    }
+
+    function resetGame() {
+      score = 0;
+      timeLeft = 45;
+      ended = false;
+      balloons = [];
+      dart = null;
+      dragging = false;
+      dragPos = null;
+      startTime = performance.now();
+      spawnTimer = 0;
+      overlay.classList.remove("open");
+      scoreEl.textContent = "0";
+      timerEl.textContent = "45";
+      statusEl.textContent = "Click and drag from the dart tray to throw.";
+    }
+
+    function update(dt) {
+      if (ended) return;
+
+      const elapsed = Math.floor((performance.now() - startTime) / 1000);
+      timeLeft = Math.max(0, 45 - elapsed);
+      timerEl.textContent = String(timeLeft);
+      if (timeLeft <= 0) {
+        endRound();
+        return;
+      }
+
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawnBalloon();
+        spawnTimer = 0.55;
+      }
+
+      balloons = balloons.filter((b) => {
+        b.x += b.vx * dt;
+        b.bob += dt * 2.2;
+        b.y += Math.sin(b.bob) * 12 * dt;
+        return b.x > -60;
+      });
+
+      if (dart) {
+        dart.vy += gravity * dt;
+        dart.vx *= 0.998;
+        dart.x += dart.vx * dt;
+        dart.y += dart.vy * dt;
+        dart.angle = Math.atan2(dart.vy, dart.vx);
+
+        for (let i = balloons.length - 1; i >= 0; i--) {
+          const b = balloons[i];
+          const d = Math.hypot(dart.x - b.x, dart.y - b.y);
+          if (d < b.r) {
+            score += b.points;
+            scoreEl.textContent = String(score);
+            statusEl.textContent = `Pop! +${b.points}`;
+            ensureAudio();
+            beep(980, 0.07, "triangle", 0.08);
+            balloons.splice(i, 1);
+            dart = null;
+            break;
+          }
+        }
+
+        if (dart && (dart.x > 970 || dart.x < -40 || dart.y > 530 || dart.y < -30)) {
+          dart = null;
+        }
+      }
+    }
+
+    function endRound() {
+      ended = true;
+      finalScore.textContent = String(score);
+      resultTitle.textContent = score >= 320 ? "Prize Won" : "No Prize This Round";
+      overlay.classList.add("open");
+    }
+
+    function drawDart(d) {
+      ctx.save();
+      ctx.translate(d.x, d.y);
+      ctx.rotate(d.angle);
+      ctx.drawImage(dartSprite, -28, -7);
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#fff1d5";
+      ctx.fillRect(0, 0, canvas.width, 86);
+      ctx.fillStyle = "#ca2d43";
+      for (let i = 0; i < canvas.width; i += 64) ctx.fillRect(i, 0, 32, 86);
+
+      ctx.fillStyle = "#41295f";
+      ctx.fillRect(0, 440, canvas.width, 80);
+
+      for (const b of balloons) {
+        if (b.sprite) {
+          ctx.drawImage(b.sprite, b.x - 36, b.y - 48);
+        }
+      }
+
+      ctx.fillStyle = "#2f6db2";
+      ctx.beginPath();
+      ctx.arc(tray.x, tray.y, tray.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 13px Verdana";
+      ctx.textAlign = "center";
+      ctx.fillText("DART", tray.x, tray.y + 4);
+
+      if (dart) {
+        drawDart(dart);
+      }
+
+      if (dragging && dragPos) {
+        ctx.strokeStyle = "rgba(28, 60, 120, .6)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(tray.x, tray.y);
+        ctx.lineTo(dragPos.x, dragPos.y);
+        ctx.stroke();
+      }
+    }
+
+    function loop(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.033);
+      lastTime = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function toCanvas(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+        y: ((e.clientY - rect.top) / rect.height) * canvas.height
+      };
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+      if (ended || dart) return;
+      ensureAudio();
+      const p = toCanvas(e);
+      if (Math.hypot(p.x - tray.x, p.y - tray.y) > tray.r + 8) return;
+      dragging = true;
+      dragPos = p;
+    });
+
+    canvas.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      dragPos = toCanvas(e);
+    });
+
+    canvas.addEventListener("pointerup", (e) => {
+      if (!dragging || ended) return;
+      dragging = false;
+      const p = toCanvas(e);
+      const dx = tray.x - p.x;
+      const dy = tray.y - p.y;
+      const power = Math.min(1, Math.hypot(dx, dy) / 170);
+      const launchVy = Math.min(dy * 3.8 - 130, -250);
+      dart = {
+        x: tray.x,
+        y: tray.y,
+        vx: dx * 3.8,
+        vy: launchVy,
+        angle: 0
+      };
+      ensureAudio();
+      beep(620, 0.08, "square", 0.07);
+      if (power < 0.1) {
+        dart.vx = 340;
+        dart.vy = -280;
+      }
+      dragPos = null;
+    });
+
+    restartBtn.addEventListener("click", resetGame);
+
+    resetGame();
+    draw();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

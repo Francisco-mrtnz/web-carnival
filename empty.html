@@ -6,13 +6,14 @@
   <title>Carnival Level Select</title>
   <style>
     :root {
-      --bg1: #ffce73;
-      --bg2: #ff8a67;
-      --bg3: #4f7fc4;
+      --bg1: #ffd37d;
+      --bg2: #ff9162;
+      --bg3: #2f5f9f;
       --ink: #1a1730;
       --panel: rgba(255, 248, 225, 0.9);
       --ring: #ffffff;
       --accent: #d62939;
+      --gold: #ffcf4a;
     }
 
     * {
@@ -30,9 +31,10 @@
       font-family: "Trebuchet MS", "Verdana", sans-serif;
       color: var(--ink);
       background: radial-gradient(circle at 12% 20%, #ffe59d, transparent 35%),
-                  radial-gradient(circle at 80% 28%, #ffab8d, transparent 42%),
-                  radial-gradient(circle at 25% 80%, #91d2ff, transparent 32%),
-                  linear-gradient(145deg, var(--bg1), var(--bg2) 45%, var(--bg3));
+          radial-gradient(circle at 80% 28%, #ffab8d, transparent 42%),
+          radial-gradient(circle at 25% 80%, #91d2ff, transparent 32%),
+          radial-gradient(circle at 50% -10%, rgba(255,255,255,0.8), transparent 34%),
+          linear-gradient(145deg, var(--bg1), var(--bg2) 45%, var(--bg3));
       display: grid;
       place-items: center;
       padding: 20px;
@@ -80,7 +82,7 @@
         rgba(255, 255, 255, 0) 30px
       ),
       var(--panel);
-      box-shadow: 0 14px 28px rgba(26, 23, 48, 0.28);
+      box-shadow: 0 14px 28px rgba(26, 23, 48, 0.28), 0 0 0 6px rgba(255, 207, 74, 0.22);
       padding: 24px;
       position: relative;
       z-index: 1;
@@ -127,7 +129,7 @@
     .game-card {
       border: 2px solid rgba(47, 109, 178, 0.25);
       border-radius: 12px;
-      background: rgba(255, 255, 255, 0.72);
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.74));
       min-height: 150px;
       display: flex;
       flex-direction: column;
@@ -135,6 +137,25 @@
       align-items: center;
       padding: 10px;
       text-align: center;
+      box-shadow: 0 8px 14px rgba(24, 20, 42, 0.18);
+      position: relative;
+      overflow: hidden;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+
+    .game-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -20% -58% -20%;
+      height: 90px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      pointer-events: none;
+    }
+
+    .game-link:hover .game-card {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 18px rgba(24, 20, 42, 0.24);
     }
 
     .game-link {
@@ -160,7 +181,19 @@
       margin-top: 8px;
       font-weight: 700;
       color: #5a5377;
+      background: rgba(255,255,255,0.75);
+      border-radius: 999px;
+      padding: 4px 8px;
     }
+
+    .theme-water { border-color: rgba(46, 126, 191, 0.55); }
+    .theme-pin { border-color: rgba(203, 40, 61, 0.55); }
+    .theme-ring { border-color: rgba(66, 157, 94, 0.55); }
+    .theme-darts { border-color: rgba(232, 111, 49, 0.55); }
+    .theme-bottle { border-color: rgba(126, 89, 56, 0.55); }
+    .theme-hoops { border-color: rgba(211, 123, 45, 0.55); }
+    .theme-skee { border-color: rgba(86, 79, 170, 0.55); }
+    .theme-coin { border-color: rgba(177, 139, 40, 0.55); }
 
     .status {
       margin-top: 12px;
@@ -199,31 +232,59 @@
   </div>
 
   <main class="panel">
-    <h1>Carnival Level Select</h1>
-    <p class="subtitle">Blank board for upcoming attractions.</p>
+    <h1>Carnival Midway</h1>
+    <p class="subtitle">Eight playable booths with physics-based carnival challenges.</p>
 
-    <section class="level-shell" aria-label="Blank level select">
-      <p>Level Select is currently blank. Choose a game title below (coming soon).</p>
+    <section class="level-shell" aria-label="Carnival game goals">
+      <p>Beat the booth goals before the timer runs out to post a high score.</p>
     </section>
 
     <section class="games" aria-label="Game titles">
-      <article class="game-card">
-        <h2>Hit the Cans</h2>
-        <small>Under Construction</small>
-      </article>
       <a class="game-link" href="spray-the-target.html" aria-label="Play Spray the Target">
-        <article class="game-card">
+        <article class="game-card theme-water">
           <h2>Spray the Target</h2>
           <small>Play Now</small>
         </article>
       </a>
-      <article class="game-card">
-        <h2>Mirror Maze</h2>
-        <small>Coming Soon</small>
-      </article>
       <a class="game-link" href="pinball.html" aria-label="Play Pinball">
-        <article class="game-card">
+        <article class="game-card theme-pin">
           <h2>Pinball</h2>
+          <small>Play Now</small>
+        </article>
+      </a>
+      <a class="game-link" href="ring-toss.html" aria-label="Play Ring Toss Rally">
+        <article class="game-card theme-ring">
+          <h2>Ring Toss Rally</h2>
+          <small>Play Now</small>
+        </article>
+      </a>
+      <a class="game-link" href="balloon-darts.html" aria-label="Play Balloon Darts">
+        <article class="game-card theme-darts">
+          <h2>Balloon Darts</h2>
+          <small>Play Now</small>
+        </article>
+      </a>
+      <a class="game-link" href="milk-bottle-knockdown.html" aria-label="Play Milk Bottle Knockdown">
+        <article class="game-card theme-bottle">
+          <h2>Milk Bottle Knockdown</h2>
+          <small>Play Now</small>
+        </article>
+      </a>
+      <a class="game-link" href="basketball-shootout.html" aria-label="Play Basketball Shootout">
+        <article class="game-card theme-hoops">
+          <h2>Basketball Shootout</h2>
+          <small>Play Now</small>
+        </article>
+      </a>
+      <a class="game-link" href="skee-ball-rush.html" aria-label="Play Skee Ball Rush">
+        <article class="game-card theme-skee">
+          <h2>Skee Ball Rush</h2>
+          <small>Play Now</small>
+        </article>
+      </a>
+      <a class="game-link" href="coin-pitch.html" aria-label="Play Coin Pitch">
+        <article class="game-card theme-coin">
+          <h2>Coin Pitch</h2>
           <small>Play Now</small>
         </article>
       </a>
