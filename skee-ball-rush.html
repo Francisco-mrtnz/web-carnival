@@ -5,320 +5,340 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Skee Ball Rush</title>
   <style>
-    :root { --ink: #1b1840; --panel: rgba(245, 243, 255, .94); --accent: #5a45c8; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", "Verdana", sans-serif; color: var(--ink); background: radial-gradient(circle at 16% 16%, #d8cbff, transparent 30%), radial-gradient(circle at 82% 24%, #b9c1ff, transparent 35%), linear-gradient(160deg, #b7a2f1, #8d87d8 46%, #5b5da9); display: grid; place-items: center; padding: 18px; }
-    .app { width: min(980px, 100%); background: var(--panel); border: 4px solid #fff; border-radius: 20px; box-shadow: 0 12px 24px rgba(20, 16, 35, .25); padding: 16px; }
-    .top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-    h1 { margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
-    .hud { display: flex; gap: 8px; flex-wrap: wrap; font-weight: 700; }
-    .pill { background: #fff; border: 2px solid rgba(47,109,178,.3); border-radius: 999px; padding: 6px 10px; }
-    canvas { width: 100%; height: auto; display: block; border-radius: 14px; border: 3px solid rgba(33,26,52,.18); background: linear-gradient(180deg, #ffd8a4 0%, #ef9b68 45%, #9b643f 100%); }
-    .meta { margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-weight: 700; color: #3c3258; }
-    .link { color: #224f87; text-decoration: none; border-bottom: 2px solid rgba(34,79,135,.35); }
-    .overlay { position: fixed; inset: 0; background: rgba(16,12,26,.66); display: none; place-items: center; padding: 16px; }
-    .overlay.open { display: grid; }
-    .card { background: #fff4dc; border: 3px solid #fff; border-radius: 14px; padding: 14px; text-align: center; width: min(420px, 100%); }
-    .btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; background: #ffce48; color: #2f2a46; }
+    body { 
+      margin: 0; 
+      min-height: 100vh; 
+      font-family: "Trebuchet MS", Verdana, sans-serif; 
+      color: #fff;
+      background: linear-gradient(135deg, #1abc9c 0%, #16a085 50%, #2ecc71 100%);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .container {
+      width: min(980px, 100%);
+      background: rgba(0,0,0,0.3);
+      border-radius: 20px;
+      border: 3px solid #fff;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    h1 { margin: 0; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .stats {
+      display: flex;
+      gap: 15px;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #e8f8f5 0%, #fff 100%);
+      border-radius: 10px;
+      display: block;
+      margin: 15px 0;
+      border: 2px solid rgba(0,0,0,0.1);
+    }
+    .info {
+      text-align: center;
+      font-weight: bold;
+      margin: 10px 0;
+      font-size: 1rem;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      font-weight: bold;
+    }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+    .modal.open { display: flex; }
+    .modal-content {
+      background: #fff;
+      border-radius: 15px;
+      padding: 30px;
+      text-align: center;
+      color: #333;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .modal-content h2 { margin: 0 0 15px; color: #1abc9c; font-size: 1.8rem; }
+    .modal-content p { margin: 10px 0; font-size: 1.2rem; font-weight: bold; }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: 0;
+      border-radius: 10px;
+      background: #1abc9c;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: #0d9c8f; }
   </style>
 </head>
 <body>
-  <main class="app">
-    <section class="top">
-      <h1>Skee Ball Rush</h1>
-      <div class="hud">
-        <span class="pill">Score: <span id="score">0</span></span>
-        <span class="pill">Balls: <span id="balls">10</span></span>
-        <span class="pill">Goal: 1000</span>
+  <div class="container">
+    <div class="header">
+      <h1>⚾ Skee Ball Rush</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+        <span>Balls: <span id="balls">10</span></span>
       </div>
-    </section>
-    <canvas id="gameCanvas" width="920" height="520" aria-label="Skee ball game"></canvas>
-    <section class="meta">
-      <span id="status">Drag from the ball return to roll.</span>
-      <a class="link" href="empty.html">Back to Midway</a>
-    </section>
-  </main>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="info">Roll balls down the ramp into the scoring holes!</div>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Goal: 1000 pts</span>
+    </div>
+  </div>
 
-  <div class="overlay" id="overlay" aria-live="polite">
-    <div class="card">
-      <h2 id="resultTitle">Round Over</h2>
-      <p>Final score: <strong id="finalScore">0</strong></p>
-      <button class="btn" id="restartBtn" type="button">Play Again</button>
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Final Score: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
     </div>
   </div>
 
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const scoreEl = document.getElementById("score");
-    const ballsEl = document.getElementById("balls");
-    const statusEl = document.getElementById("status");
-    const overlay = document.getElementById("overlay");
-    const resultTitle = document.getElementById("resultTitle");
-    const finalScore = document.getElementById("finalScore");
-    const restartBtn = document.getElementById("restartBtn");
-
-    const start = { x: 140, y: 430, r: 40 };
-    const gravity = 700;
-    const rampY = (x) => 460 - (Math.max(0, x - 170) / 620) * 210;
-    const pockets = [
-      { x: 720, y: 170, r: 26, pts: 100 },
-      { x: 780, y: 145, r: 22, pts: 200 },
-      { x: 840, y: 170, r: 26, pts: 100 },
-      { x: 780, y: 205, r: 30, pts: 50 }
-    ];
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const ballsEl = document.getElementById('balls');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
 
     let score = 0;
     let ballsLeft = 10;
+    let gameActive = true;
     let ball = null;
-    let ended = false;
     let dragging = false;
-    let dragPos = null;
-    let lastTime = performance.now();
+    let dragStart = null;
+    let lastFrame = Date.now();
 
-    let audioCtx = null;
-    let musicTimer = null;
-    let beatStep = 0;
-    const melody = [523.25, 587.33, 659.25, 698.46, 659.25, 587.33, 523.25, 493.88];
-    const bass = [146.83, null, 164.81, null, 130.81, null, 123.47, null];
+    const launcher = { x: 460, y: 450, r: 25 };
+    const gravity = 1000;
+    const ballRadius = 8;
 
-    function makeSprite(width, height, painter) {
-      const sprite = document.createElement("canvas");
-      sprite.width = width;
-      sprite.height = height;
-      const sctx = sprite.getContext("2d");
-      painter(sctx, width, height);
-      return sprite;
+    // Scoring holes
+    const holes = [
+      { x: 200, y: 120, points: 50, r: 20, color: '#e74c3c' },
+      { x: 460, y: 80, points: 100, r: 20, color: '#f39c12' },
+      { x: 720, y: 120, points: 50, r: 20, color: '#e74c3c' },
+      { x: 150, y: 200, points: 30, r: 18, color: '#95a5a6' },
+      { x: 460, y: 180, points: 200, r: 22, color: '#f1c40f' },
+      { x: 770, y: 200, points: 30, r: 18, color: '#95a5a6' }
+    ];
+
+    class Ball {
+      constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.r = ballRadius;
+      }
+
+      update(dt) {
+        this.vy += gravity * dt * 0.5;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        if (this.x - this.r < 0) { this.x = this.r; this.vx *= -0.8; }
+        if (this.x + this.r > canvas.width) { this.x = canvas.width - this.r; this.vx *= -0.8; }
+        if (this.y - this.r < 0) { this.y = this.r; this.vy *= -0.8; }
+      }
+
+      draw(ctx) {
+        const grad = ctx.createRadialGradient(this.x - 3, this.y - 3, 2, this.x, this.y, this.r);
+        grad.addColorStop(0, '#3498db');
+        grad.addColorStop(1, '#2980b9');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      isOutOfBounds() {
+        return this.y > canvas.height + 100 || this.x < -50 || this.x > canvas.width + 50;
+      }
+
+      checkHoles() {
+        for (let hole of holes) {
+          const dx = this.x - hole.x;
+          const dy = this.y - hole.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < hole.r) {
+            return hole;
+          }
+        }
+        return null;
+      }
     }
 
-    const laneBallSprite = makeSprite(30, 30, (sctx, w, h) => {
-      sctx.fillStyle = "#f3efe9";
-      sctx.beginPath();
-      sctx.arc(w / 2, h / 2, 11, 0, Math.PI * 2);
-      sctx.fill();
-      sctx.strokeStyle = "#8d8276";
-      sctx.stroke();
-    });
-
-    function ensureAudio() {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return;
-      if (!audioCtx) audioCtx = new AudioContextClass();
-      if (audioCtx.state === "suspended") audioCtx.resume();
-      if (!musicTimer) musicTimer = window.setInterval(playMusicStep, 250);
-    }
-
-    function beep(freq, duration, type, gainValue) {
-      if (!audioCtx || !freq) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
-    }
-
-    function playMusicStep() {
-      if (!audioCtx || audioCtx.state !== "running") return;
-      const tone = melody[beatStep % melody.length];
-      const low = bass[beatStep % bass.length];
-      beep(tone, 0.18, "triangle", 0.02);
-      if (low) beep(low, 0.22, "sine", 0.016);
-      beatStep = (beatStep + 1) % melody.length;
-    }
-
-    function resetGame() {
-      score = 0;
-      ballsLeft = 10;
-      ball = null;
-      ended = false;
-      dragging = false;
-      dragPos = null;
-      overlay.classList.remove("open");
-      scoreEl.textContent = "0";
-      ballsEl.textContent = "10";
-      statusEl.textContent = "Drag from the ball return to roll.";
-    }
-
-    function launch(vx, vy) {
-      ball = { x: start.x, y: start.y, vx, vy, r: 12, scored: false };
+    function launchBall(fromX, fromY, toX, toY) {
+      if (ball || ballsLeft <= 0) return;
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const speed = Math.sqrt(dx * dx + dy * dy) * 1.2;
+      const angle = Math.atan2(dy, dx);
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed * 0.7;
+      ball = new Ball(fromX, fromY, vx, vy);
+      ballsLeft--;
+      ballsEl.textContent = ballsLeft;
     }
 
     function update(dt) {
-      if (!ball || ended) return;
+      if (!gameActive) return;
 
-      ball.vy += gravity * dt;
-      ball.x += ball.vx * dt;
-      ball.y += ball.vy * dt;
-
-      const surface = rampY(ball.x);
-      if (ball.y + ball.r > surface && ball.x > 170 && ball.x < 890) {
-        ball.y = surface - ball.r;
-        ball.vy *= -0.2;
-        ball.vx *= 0.975;
-      }
-
-      if (ball.y + ball.r > 500) {
-        ball.y = 500 - ball.r;
-        ball.vy *= -0.35;
-        ball.vx *= 0.88;
-      }
-
-      if (ball.x < 18) {
-        ball.x = 18;
-        ball.vx *= -0.35;
-      }
-      if (ball.x > 902) {
-        ball.x = 902;
-        ball.vx *= -0.35;
-      }
-
-      for (const p of pockets) {
-        const d = Math.hypot(ball.x - p.x, ball.y - p.y);
-        if (!ball.scored && d < p.r - 4 && Math.hypot(ball.vx, ball.vy) < 220) {
-          ball.scored = true;
-          score += p.pts;
-          scoreEl.textContent = String(score);
-          statusEl.textContent = `Pocket made: +${p.pts}`;
-          ensureAudio();
-          beep(830, 0.08, "triangle", 0.08);
-          ball = null;
-          checkEnd();
-          return;
-        }
-      }
-
-      if (Math.abs(ball.vx) < 8 && Math.abs(ball.vy) < 8 && ball.y > 470) {
-        ball = null;
-        checkEnd();
+      if (ballsLeft === 0 && !ball) {
+        endGame();
         return;
       }
 
-      if (ball.y > 560 || ball.x < -50 || ball.x > 980) {
-        ball = null;
-        checkEnd();
-      }
-    }
+      if (ball) {
+        ball.update(dt);
 
-    function checkEnd() {
-      if (ballsLeft > 0 || ball) return;
-      ended = true;
-      finalScore.textContent = String(score);
-      resultTitle.textContent = score >= 1000 ? "High Roller" : "Keep Practicing";
-      overlay.classList.add("open");
+        const hole = ball.checkHoles();
+        if (hole) {
+          score += hole.points;
+          scoreEl.textContent = score;
+          ball = null;
+        }
+
+        if (ball && ball.isOutOfBounds()) {
+          ball = null;
+        }
+      }
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "#fff1d5";
-      ctx.fillRect(0, 0, canvas.width, 86);
-      ctx.fillStyle = "#ca2d43";
-      for (let i = 0; i < canvas.width; i += 64) ctx.fillRect(i, 0, 32, 86);
+      // Draw ramp background
+      ctx.fillStyle = '#d4a574';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "#6e442c";
+      // Draw ramp with perspective
+      ctx.fillStyle = '#cd853f';
       ctx.beginPath();
-      ctx.moveTo(170, 460);
-      ctx.lineTo(900, 250);
-      ctx.lineTo(900, 520);
-      ctx.lineTo(170, 520);
+      ctx.moveTo(100, 450);
+      ctx.lineTo(820, 450);
+      ctx.lineTo(780, 100);
+      ctx.lineTo(140, 100);
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillStyle = "#8e5a39";
-      ctx.fillRect(0, 500, canvas.width, 20);
+      ctx.strokeStyle = '#8b4513';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-      for (const p of pockets) {
-        ctx.fillStyle = "#2f2f2f";
+      // Draw ramp lanes
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 6; i++) {
+        const startX = 100 + (720 / 6) * i;
+        const endX = 140 + (640 / 6) * i;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#f0d28b";
-        ctx.lineWidth = 3;
+        ctx.moveTo(startX, 450);
+        ctx.lineTo(endX, 100);
         ctx.stroke();
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 14px Verdana";
-        ctx.textAlign = "center";
-        ctx.fillText(String(p.pts), p.x, p.y + 4);
       }
 
-      ctx.fillStyle = "#2f6db2";
-      ctx.beginPath();
-      ctx.arc(start.x, start.y, start.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 13px Verdana";
-      ctx.textAlign = "center";
-      ctx.fillText("ROLL", start.x, start.y + 4);
+      // Draw scoring holes
+      for (let hole of holes) {
+        ctx.fillStyle = hole.color;
+        ctx.beginPath();
+        ctx.arc(hole.x, hole.y, hole.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(hole.points, hole.x, hole.y);
+      }
+
+      // Draw launcher
+      ctx.fillStyle = '#654321';
+      ctx.fillRect(launcher.x - launcher.r, launcher.y - launcher.r, launcher.r * 2, launcher.r * 2);
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(launcher.x - launcher.r, launcher.y - launcher.r, launcher.r * 2, launcher.r * 2);
 
       if (ball) {
-        ctx.drawImage(laneBallSprite, ball.x - 15, ball.y - 15);
-      }
-
-      if (dragging && dragPos) {
-        ctx.strokeStyle = "rgba(26, 57, 121, 0.6)";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(start.x, start.y);
-        ctx.lineTo(dragPos.x, dragPos.y);
-        ctx.stroke();
+        ball.draw(ctx);
       }
     }
 
-    function loop(now) {
-      const dt = Math.min((now - lastTime) / 1000, 0.033);
-      lastTime = now;
+    function endGame() {
+      gameActive = false;
+      finalScoreEl.textContent = score;
+      modalEl.classList.add('open');
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = Math.min((now - lastFrame) / 1000, 0.033);
+      lastFrame = now;
+
       update(dt);
       draw();
-      requestAnimationFrame(loop);
+      requestAnimationFrame(gameLoop);
     }
 
-    function toCanvas(e) {
+    canvas.addEventListener('mousedown', (e) => {
+      if (!gameActive || ball) return;
       const rect = canvas.getBoundingClientRect();
-      return {
-        x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-        y: ((e.clientY - rect.top) / rect.height) * canvas.height
-      };
-    }
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const dx = x - launcher.x;
+      const dy = y - launcher.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-    canvas.addEventListener("pointerdown", (e) => {
-      if (ended || ball || ballsLeft <= 0) return;
-      ensureAudio();
-      const p = toCanvas(e);
-      if (Math.hypot(p.x - start.x, p.y - start.y) > start.r + 8) return;
-      dragging = true;
-      dragPos = p;
+      if (dist < launcher.r * 1.5) {
+        dragging = true;
+        dragStart = { x, y };
+      }
     });
 
-    canvas.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
-      dragPos = toCanvas(e);
+    canvas.addEventListener('mouseup', (e) => {
+      if (dragging && dragStart) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        launchBall(launcher.x, launcher.y, x, y);
+        dragging = false;
+        dragStart = null;
+      }
     });
 
-    canvas.addEventListener("pointerup", (e) => {
-      if (!dragging || ended || ball || ballsLeft <= 0) return;
-      dragging = false;
-      const p = toCanvas(e);
-      const dx = start.x - p.x;
-      const dy = start.y - p.y;
-      const launchVy = Math.min(dy * 2.6 - 90, -180);
-      launch(dx * 3.5, launchVy);
-      ensureAudio();
-      beep(560, 0.08, "square", 0.07);
-      ballsLeft -= 1;
-      ballsEl.textContent = String(ballsLeft);
-      dragPos = null;
-    });
-
-    restartBtn.addEventListener("click", resetGame);
-
-    resetGame();
-    draw();
-    requestAnimationFrame(loop);
+    requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>

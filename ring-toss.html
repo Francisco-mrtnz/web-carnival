@@ -3,390 +3,345 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ring Toss Rally</title>
+  <title>Ring Toss</title>
   <style>
-    :root {
-      --ink: #1f1431;
-      --panel: rgba(246, 255, 240, 0.93);
-      --accent: #2e915f;
-    }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: "Trebuchet MS", "Verdana", sans-serif;
-      color: var(--ink);
-      background: radial-gradient(circle at 14% 14%, #dfffc8, transparent 32%),
-          radial-gradient(circle at 84% 20%, #ffd2a9, transparent 36%),
-          linear-gradient(160deg, #b6ef95, #ffd38d 45%, #da7f47);
+    body { 
+      margin: 0; 
+      min-height: 100vh; 
+      font-family: "Trebuchet MS", Verdana, sans-serif; 
+      color: #fff;
+      background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 50%, #ee5a6f 100%);
       display: grid;
       place-items: center;
-      padding: 18px;
+      padding: 20px;
     }
-    .app {
+    .container {
       width: min(980px, 100%);
-      background: var(--panel);
-      border: 4px solid #fff;
+      background: rgba(0,0,0,0.3);
       border-radius: 20px;
-      box-shadow: 0 12px 24px rgba(20, 16, 35, 0.25);
-      padding: 16px;
+      border: 3px solid #fff;
+      padding: 20px;
     }
-    .top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-    h1 { margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
-    .hud { display: flex; gap: 8px; flex-wrap: wrap; font-weight: 700; }
-    .pill { background: #fff; border: 2px solid rgba(47,109,178,.3); border-radius: 999px; padding: 6px 10px; }
-    canvas { width: 100%; height: auto; display: block; border-radius: 14px; border: 3px solid rgba(33,26,52,.18); background: linear-gradient(180deg, #ffd79e 0%, #ef9b68 45%, #8f5a34 100%); }
-    .meta { margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-weight: 700; color: #3c3258; }
-    .link { color: #224f87; text-decoration: none; border-bottom: 2px solid rgba(34,79,135,.35); }
-    .overlay { position: fixed; inset: 0; background: rgba(16,12,26,.66); display: none; place-items: center; padding: 16px; }
-    .overlay.open { display: grid; }
-    .card { background: #fff4dc; border: 3px solid #fff; border-radius: 14px; padding: 14px; text-align: center; width: min(420px, 100%); }
-    .btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; }
-    .restart { background: #ffce48; color: #2f2a46; }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    h1 { margin: 0; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .stats {
+      display: flex;
+      gap: 15px;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #fff4e6 0%, #ffe5cc 100%);
+      border-radius: 10px;
+      display: block;
+      margin: 15px 0;
+      border: 2px solid rgba(0,0,0,0.1);
+    }
+    .info {
+      text-align: center;
+      font-weight: bold;
+      margin: 10px 0;
+      font-size: 1rem;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      font-weight: bold;
+    }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+    .modal.open { display: flex; }
+    .modal-content {
+      background: #fff;
+      border-radius: 15px;
+      padding: 30px;
+      text-align: center;
+      color: #333;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .modal-content h2 { margin: 0 0 15px; color: #ff9a56; font-size: 1.8rem; }
+    .modal-content p { margin: 10px 0; font-size: 1.2rem; font-weight: bold; }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: 0;
+      border-radius: 10px;
+      background: #ff9a56;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: #ff8040; }
   </style>
 </head>
 <body>
-  <main class="app">
-    <section class="top">
-      <h1>Ring Toss Rally</h1>
-      <div class="hud">
-        <span class="pill">Score: <span id="score">0</span></span>
-        <span class="pill">Rings: <span id="rings">11</span></span>
-        <span class="pill">Goal: 520</span>
+  <div class="container">
+    <div class="header">
+      <h1>💍 Ring Toss</h1>
+      <div class="stats">
+        <span>Score: <span id="score">0</span></span>
+        <span>Rings: <span id="rings">8</span></span>
       </div>
-    </section>
-    <canvas id="gameCanvas" width="920" height="520" aria-label="Ring toss game"></canvas>
-    <section class="meta">
-      <span id="status">Drag from the ring stack to throw.</span>
-      <a class="link" href="empty.html">Back to Midway</a>
-    </section>
-  </main>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="info">Toss rings onto the bottle necks!</div>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Goal: 5 rings on</span>
+    </div>
+  </div>
 
-  <div class="overlay" id="overlay" aria-live="polite">
-    <div class="card">
-      <h2 id="resultTitle">Round Over</h2>
-      <p>Final score: <strong id="finalScore">0</strong></p>
-      <button class="btn restart" id="restartBtn" type="button">Play Again</button>
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Rings On: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
     </div>
   </div>
 
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const scoreEl = document.getElementById("score");
-    const ringsEl = document.getElementById("rings");
-    const statusEl = document.getElementById("status");
-    const overlay = document.getElementById("overlay");
-    const resultTitle = document.getElementById("resultTitle");
-    const finalScore = document.getElementById("finalScore");
-    const restartBtn = document.getElementById("restartBtn");
-
-    const gravity = 720;
-    const bottleNeckRadius = 11;
-    const throwOrigin = { x: 110, y: 430 };
-
-    let audioCtx = null;
-    let musicTimer = null;
-    let beatStep = 0;
-    const melody = [392, 523.25, 659.25, 523.25, 587.33, 523.25, 440, 523.25];
-    const bass = [130.81, null, 146.83, null, 123.47, null, 110, null];
-
-    function makeSprite(width, height, painter) {
-      const sprite = document.createElement("canvas");
-      sprite.width = width;
-      sprite.height = height;
-      const sctx = sprite.getContext("2d");
-      painter(sctx, width, height);
-      return sprite;
-    }
-
-    const ringSpriteBlue = makeSprite(44, 44, (sctx, w, h) => {
-      sctx.strokeStyle = "#2e6fb6";
-      sctx.lineWidth = 6;
-      sctx.beginPath();
-      sctx.arc(w / 2, h / 2, 15, 0, Math.PI * 2);
-      sctx.stroke();
-      sctx.strokeStyle = "rgba(255,255,255,0.65)";
-      sctx.lineWidth = 2;
-      sctx.beginPath();
-      sctx.arc(w / 2, h / 2, 11, 0, Math.PI * 2);
-      sctx.stroke();
-    });
-
-    const ringSpriteGreen = makeSprite(44, 44, (sctx, w, h) => {
-      sctx.strokeStyle = "#36a36c";
-      sctx.lineWidth = 6;
-      sctx.beginPath();
-      sctx.arc(w / 2, h / 2, 15, 0, Math.PI * 2);
-      sctx.stroke();
-      sctx.strokeStyle = "rgba(255,255,255,0.65)";
-      sctx.lineWidth = 2;
-      sctx.beginPath();
-      sctx.arc(w / 2, h / 2, 11, 0, Math.PI * 2);
-      sctx.stroke();
-    });
-
-    const bottleSprite = makeSprite(64, 130, (sctx, w, h) => {
-      sctx.fillStyle = "#efe2d4";
-      sctx.beginPath();
-      sctx.moveTo(14, h - 6);
-      sctx.lineTo(w - 14, h - 6);
-      sctx.lineTo(w - 8, 50);
-      sctx.lineTo(w / 2 + 8, 50);
-      sctx.lineTo(w / 2 + 8, 8);
-      sctx.lineTo(w / 2 - 8, 8);
-      sctx.lineTo(w / 2 - 8, 50);
-      sctx.lineTo(8, 50);
-      sctx.closePath();
-      sctx.fill();
-      sctx.strokeStyle = "#7c6148";
-      sctx.lineWidth = 2;
-      sctx.stroke();
-      sctx.fillStyle = "#bf3045";
-      sctx.fillRect(12, 70, w - 24, 10);
-    });
-
-    function ensureAudio() {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return;
-      if (!audioCtx) audioCtx = new AudioContextClass();
-      if (audioCtx.state === "suspended") audioCtx.resume();
-      if (!musicTimer) musicTimer = window.setInterval(playMusicStep, 320);
-    }
-
-    function beep(freq, duration, type, gainValue) {
-      if (!audioCtx || !freq) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
-    }
-
-    function playMusicStep() {
-      if (!audioCtx || audioCtx.state !== "running") return;
-      const tone = melody[beatStep % melody.length];
-      const low = bass[beatStep % bass.length];
-      beep(tone, 0.22, "triangle", 0.025);
-      if (low) beep(low, 0.24, "sine", 0.02);
-      beatStep = (beatStep + 1) % melody.length;
-    }
-
-    const bottles = [
-      { x: 520, y: 390, points: 80 },
-      { x: 590, y: 375, points: 100 },
-      { x: 660, y: 390, points: 80 },
-      { x: 560, y: 330, points: 140 },
-      { x: 630, y: 330, points: 140 },
-      { x: 595, y: 280, points: 220 }
-    ];
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const ringsEl = document.getElementById('rings');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
 
     let score = 0;
-    let ringsLeft = 11;
-    let activeRing = null;
-    let settled = [];
+    let rings = 8;
+    let gameActive = true;
+    let ring = null;
     let dragging = false;
-    let dragPos = null;
-    let ended = false;
-    let lastTime = performance.now();
+    let dragStart = null;
+    let lastFrame = Date.now();
+    let bottles = [];
+    let ringsOnBottles = [];
 
-    function resetGame() {
-      score = 0;
-      ringsLeft = 11;
-      activeRing = null;
-      settled = [];
-      dragging = false;
-      dragPos = null;
-      ended = false;
-      overlay.classList.remove("open");
-      scoreEl.textContent = "0";
-      ringsEl.textContent = "11";
-      statusEl.textContent = "Drag from the ring stack to throw.";
-    }
+    const tray = { x: 100, y: 450, r: 30 };
+    const gravity = 800;
 
-    function startRing(x, y) {
-      if (ended || ringsLeft <= 0 || activeRing) return;
-      const dx = x - throwOrigin.x;
-      const dy = y - throwOrigin.y;
-      if (Math.hypot(dx, dy) > 46) return;
-      dragging = true;
-      dragPos = { x, y };
-    }
-
-    function releaseRing(x, y) {
-      if (!dragging || ended) return;
-      dragging = false;
-      const dx = throwOrigin.x - x;
-      const dy = throwOrigin.y - y;
-      const power = Math.min(1, Math.hypot(dx, dy) / 180);
-      const launchVy = Math.min(dy * 3.1 - 40, -240);
-      activeRing = {
-        x: throwOrigin.x,
-        y: throwOrigin.y,
-        vx: dx * 2.7,
-        vy: launchVy,
-        radius: 15,
-        scored: false
-      };
-      if (power < 0.12) {
-        activeRing.vx = 220;
-        activeRing.vy = -260;
+    class Bottle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.neckRadius = 8;
+        this.ringOnIt = false;
       }
-      ensureAudio();
-      beep(560, 0.08, "square", 0.08);
-      ringsLeft -= 1;
-      ringsEl.textContent = String(ringsLeft);
-      statusEl.textContent = "Good throw. Aim for bottle necks.";
-      dragPos = null;
+
+      draw(ctx) {
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(this.x - 15, this.y - 30, 30, 40);
+        ctx.fillRect(this.x - 12, this.y - 35, 24, 8);
+
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x - 15, this.y - 30, 30, 40);
+      }
     }
 
-    function updateRing(dt) {
-      if (!activeRing) return;
-      activeRing.vy += gravity * dt;
-      activeRing.vx *= 0.997;
-      activeRing.x += activeRing.vx * dt;
-      activeRing.y += activeRing.vy * dt;
+    class Ring {
+      constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.r = 15;
+        this.rotation = 0;
+        this.rotationSpeed = Math.random() * 0.2 + 0.1;
+        this.onBottle = false;
+      }
 
-      for (const bottle of bottles) {
-        const neckY = bottle.y - 74;
-        const d = Math.hypot(activeRing.x - bottle.x, activeRing.y - neckY);
-        const lowSpeed = Math.hypot(activeRing.vx, activeRing.vy) < 250;
-        if (!activeRing.scored && d < bottleNeckRadius + 2 && lowSpeed && activeRing.y < bottle.y - 58) {
-          activeRing.scored = true;
-          score += bottle.points;
-          scoreEl.textContent = String(score);
-          settled.push({ x: bottle.x, y: neckY + 4, radius: 15, onBottle: true });
-          activeRing = null;
-          ensureAudio();
-          beep(880, 0.08, "triangle", 0.1);
-          window.setTimeout(() => beep(1174.66, 0.1, "triangle", 0.08), 50);
-          statusEl.textContent = `Ringer! +${bottle.points}`;
-          checkEnd();
-          return;
+      update(dt) {
+        if (this.onBottle) return;
+
+        this.vy += gravity * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.rotation += this.rotationSpeed;
+
+        if (this.x - this.r < 0) { this.x = this.r; this.vx *= -0.7; }
+        if (this.x + this.r > canvas.width) { this.x = canvas.width - this.r; this.vx *= -0.7; }
+        if (this.y - this.r < 0) { this.y = this.r; this.vy *= -0.7; }
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      isOutOfBounds() {
+        return this.y > canvas.height + 50;
+      }
+
+      checkBottles() {
+        for (let bottle of bottles) {
+          const dx = this.x - bottle.x;
+          const dy = this.y - bottle.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < bottle.neckRadius + this.r * 0.5 && this.y > bottle.y - 20) {
+            return bottle;
+          }
+        }
+        return null;
+      }
+    }
+
+    function throwRing(fromX, fromY, toX, toY) {
+      if (ring || rings <= 0) return;
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const speed = Math.sqrt(dx * dx + dy * dy) * 0.9;
+      const angle = Math.atan2(dy, dx);
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      ring = new Ring(fromX, fromY, vx, vy);
+      rings--;
+      ringsEl.textContent = rings;
+    }
+
+    function update(dt) {
+      if (!gameActive) return;
+
+      if (rings === 0 && !ring) {
+        endGame();
+        return;
+      }
+
+      if (ring) {
+        ring.update(dt);
+
+        const bottle = ring.checkBottles();
+        if (bottle && !bottle.ringOnIt) {
+          ring.onBottle = true;
+          ring.x = bottle.x;
+          ring.y = bottle.y - 2;
+          ring.vx = 0;
+          ring.vy = 0;
+          bottle.ringOnIt = true;
+          score++;
+          scoreEl.textContent = score;
+          ringsOnBottles.push(ring);
+          ring = null;
+        }
+
+        if (ring && ring.isOutOfBounds()) {
+          ring = null;
         }
       }
-
-      if (activeRing.y > 500) {
-        if (Math.abs(activeRing.vy) < 160) {
-          settled.push({ x: activeRing.x, y: 500, radius: 15, onBottle: false });
-          activeRing = null;
-          checkEnd();
-        } else {
-          activeRing.y = 500;
-          activeRing.vy *= -0.33;
-          activeRing.vx *= 0.72;
-        }
-      }
-
-      if (activeRing && (activeRing.x < -40 || activeRing.x > 960)) {
-        activeRing = null;
-        checkEnd();
-      }
-    }
-
-    function checkEnd() {
-      if (ringsLeft > 0 || activeRing) return;
-      ended = true;
-      finalScore.textContent = String(score);
-      resultTitle.textContent = score >= 520 ? "You Won The Plush Prize" : "Close Round";
-      overlay.classList.add("open");
-      statusEl.textContent = score >= 520 ? "Goal met." : "Try for 520 points.";
-    }
-
-    function drawBottle(b) {
-      ctx.drawImage(bottleSprite, b.x - 32, b.y - 86);
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 13px Verdana";
-      ctx.textAlign = "center";
-      ctx.fillText(String(b.points), b.x, b.y - 22);
-    }
-
-    function drawRing(r, color) {
-      const sprite = color === "#36a36c" ? ringSpriteGreen : ringSpriteBlue;
-      ctx.drawImage(sprite, r.x - 22, r.y - 22, r.radius * 2.9, r.radius * 2.9);
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "#fff1d5";
-      ctx.fillRect(0, 0, canvas.width, 92);
-      ctx.fillStyle = "#ca2d43";
-      for (let i = 0; i < canvas.width; i += 64) {
-        ctx.fillRect(i, 0, 32, 92);
+      // Draw grass
+      ctx.fillStyle = '#90EE90';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw bottles
+      for (let bottle of bottles) {
+        bottle.draw(ctx);
       }
 
-      ctx.fillStyle = "#986241";
-      ctx.fillRect(0, 430, canvas.width, 90);
-
-      for (const bottle of bottles) {
-        drawBottle(bottle);
+      // Draw rings on bottles
+      for (let r of ringsOnBottles) {
+        r.draw(ctx);
       }
 
-      for (const ring of settled) {
-        drawRing(ring, ring.onBottle ? "#36a36c" : "#2e6fb6");
+      // Draw active ring
+      if (ring) {
+        ring.draw(ctx);
       }
 
-      if (activeRing) {
-        drawRing(activeRing, "#2e6fb6");
-      }
-
-      for (let i = 0; i < Math.min(4, ringsLeft); i++) {
-        drawRing({ x: throwOrigin.x + i * 10, y: throwOrigin.y - i * 8, radius: 15 }, "#2e6fb6");
-      }
-
-      if (dragging && dragPos) {
-        ctx.strokeStyle = "rgba(44, 61, 120, 0.6)";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(throwOrigin.x, throwOrigin.y);
-        ctx.lineTo(dragPos.x, dragPos.y);
-        ctx.stroke();
-      }
+      // Draw tray
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(tray.x - tray.r, tray.y - tray.r, tray.r * 2, tray.r * 2);
+      ctx.strokeStyle = '#654321';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(tray.x - tray.r, tray.y - tray.r, tray.r * 2, tray.r * 2);
     }
 
-    function loop(now) {
-      const dt = Math.min((now - lastTime) / 1000, 0.033);
-      lastTime = now;
-      updateRing(dt);
+    function endGame() {
+      gameActive = false;
+      finalScoreEl.textContent = score;
+      modalEl.classList.add('open');
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = Math.min((now - lastFrame) / 1000, 0.033);
+      lastFrame = now;
+
+      update(dt);
       draw();
-      requestAnimationFrame(loop);
+      requestAnimationFrame(gameLoop);
     }
 
-    function toCanvas(e) {
+    canvas.addEventListener('mousedown', (e) => {
+      if (!gameActive || ring) return;
       const rect = canvas.getBoundingClientRect();
-      return {
-        x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-        y: ((e.clientY - rect.top) / rect.height) * canvas.height
-      };
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const dx = x - tray.x;
+      const dy = y - tray.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < tray.r * 1.5) {
+        dragging = true;
+        dragStart = { x, y };
+      }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (dragging && dragStart) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        throwRing(tray.x, tray.y, x, y);
+        dragging = false;
+        dragStart = null;
+      }
+    });
+
+    // Create bottles
+    for (let i = 0; i < 5; i++) {
+      bottles.push(new Bottle(250 + i * 120, 280));
     }
 
-    canvas.addEventListener("pointerdown", (e) => {
-      ensureAudio();
-      const p = toCanvas(e);
-      startRing(p.x, p.y);
-    });
-
-    canvas.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
-      dragPos = toCanvas(e);
-    });
-
-    canvas.addEventListener("pointerup", (e) => {
-      const p = toCanvas(e);
-      releaseRing(p.x, p.y);
-    });
-
-    restartBtn.addEventListener("click", resetGame);
-
-    resetGame();
-    draw();
-    requestAnimationFrame(loop);
+    requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>

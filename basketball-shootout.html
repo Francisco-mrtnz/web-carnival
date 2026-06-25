@@ -5,331 +5,313 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Basketball Shootout</title>
   <style>
-    :root { --ink: #10231e; --panel: rgba(227, 255, 243, .93); --accent: #f06b24; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", "Verdana", sans-serif; color: var(--ink); background: radial-gradient(circle at 16% 16%, #9bffc8, transparent 30%), radial-gradient(circle at 82% 24%, #7dd8b6, transparent 35%), linear-gradient(160deg, #86dca8, #5ec793 46%, #2f8b68); display: grid; place-items: center; padding: 18px; }
-    .app { width: min(980px, 100%); background: var(--panel); border: 4px solid #fff; border-radius: 20px; box-shadow: 0 12px 24px rgba(20, 16, 35, .25); padding: 16px; }
-    .top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-    h1 { margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
-    .hud { display: flex; gap: 8px; flex-wrap: wrap; font-weight: 700; }
-    .pill { background: #fff; border: 2px solid rgba(47,109,178,.3); border-radius: 999px; padding: 6px 10px; }
-    canvas { width: 100%; height: auto; display: block; border-radius: 14px; border: 3px solid rgba(33,26,52,.18); background: linear-gradient(180deg, #ffd8a4 0%, #ef9b68 45%, #9b643f 100%); }
-    .meta { margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-weight: 700; color: #3c3258; }
-    .link { color: #224f87; text-decoration: none; border-bottom: 2px solid rgba(34,79,135,.35); }
-    .overlay { position: fixed; inset: 0; background: rgba(16,12,26,.66); display: none; place-items: center; padding: 16px; }
-    .overlay.open { display: grid; }
-    .card { background: #fff4dc; border: 3px solid #fff; border-radius: 14px; padding: 14px; text-align: center; width: min(420px, 100%); }
-    .btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; background: #ffce48; color: #2f2a46; }
+    body { 
+      margin: 0; 
+      min-height: 100vh; 
+      font-family: "Trebuchet MS", Verdana, sans-serif; 
+      color: #fff;
+      background: linear-gradient(135deg, #1e90ff 0%, #32cd32 50%, #ffa500 100%);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .container {
+      width: min(980px, 100%);
+      background: rgba(0,0,0,0.3);
+      border-radius: 20px;
+      border: 3px solid #fff;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    h1 { margin: 0; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .stats {
+      display: flex;
+      gap: 15px;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #e8f4f8 0%, #fff 100%);
+      border-radius: 10px;
+      display: block;
+      margin: 15px 0;
+      border: 2px solid rgba(0,0,0,0.1);
+    }
+    .info {
+      text-align: center;
+      font-weight: bold;
+      margin: 10px 0;
+      font-size: 1rem;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      font-weight: bold;
+    }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+    .modal.open { display: flex; }
+    .modal-content {
+      background: #fff;
+      border-radius: 15px;
+      padding: 30px;
+      text-align: center;
+      color: #333;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .modal-content h2 { margin: 0 0 15px; color: #ff6b00; font-size: 1.8rem; }
+    .modal-content p { margin: 10px 0; font-size: 1.2rem; font-weight: bold; }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: 0;
+      border-radius: 10px;
+      background: #ff6b00;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: #ff5000; }
   </style>
 </head>
 <body>
-  <main class="app">
-    <section class="top">
-      <h1>Basketball Shootout</h1>
-      <div class="hud">
-        <span class="pill">Score: <span id="score">0</span></span>
-        <span class="pill">Time: <span id="timer">50</span>s</span>
-        <span class="pill">Goal: 7 made shots</span>
+  <div class="container">
+    <div class="header">
+      <h1>🏀 Basketball Shootout</h1>
+      <div class="stats">
+        <span>Made: <span id="score">0</span></span>
+        <span>Time: <span id="timer">60</span>s</span>
       </div>
-    </section>
-    <canvas id="gameCanvas" width="920" height="520" aria-label="Basketball shootout game"></canvas>
-    <section class="meta">
-      <span id="status">Drag from the ball rack to shoot.</span>
-      <a class="link" href="empty.html">Back to Midway</a>
-    </section>
-  </main>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="info">Drag from the rack to shoot. Make 8 baskets!</div>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Goal: 8 shots</span>
+    </div>
+  </div>
 
-  <div class="overlay" id="overlay" aria-live="polite">
-    <div class="card">
-      <h2 id="resultTitle">Round Over</h2>
-      <p>Made shots: <strong id="finalCount">0</strong></p>
-      <button class="btn" id="restartBtn" type="button">Play Again</button>
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Made Shots: <span id="finalScore">0</span></p>
+      <button onclick="location.reload()">Play Again</button>
     </div>
   </div>
 
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const scoreEl = document.getElementById("score");
-    const timerEl = document.getElementById("timer");
-    const statusEl = document.getElementById("status");
-    const overlay = document.getElementById("overlay");
-    const resultTitle = document.getElementById("resultTitle");
-    const finalCount = document.getElementById("finalCount");
-    const restartBtn = document.getElementById("restartBtn");
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
 
-    const gravity = 800;
-    const floorY = 470;
-    const rack = { x: 125, y: 422, r: 40 };
-    const hoop = { x: 760, y: 220, r: 24 };
-    const backboardX = 806;
-
+    let score = 0;
+    let timeLeft = 60;
+    let gameActive = true;
     let ball = null;
-    let made = 0;
-    let timeLeft = 50;
-    let ended = false;
     let dragging = false;
-    let dragPos = null;
-    let startTime = 0;
-    let lastTime = performance.now();
+    let dragStart = null;
+    let startTime = Date.now();
+    let lastFrame = Date.now();
 
-    let audioCtx = null;
-    let musicTimer = null;
-    let beatStep = 0;
-    const melody = [440, 493.88, 587.33, 659.25, 587.33, 523.25, 493.88, 440];
-    const bass = [110, null, 123.47, null, 98, null, 87.31, null];
+    const ballRack = { x: 120, y: 450, r: 35 };
+    const hoop = { x: 750, y: 200, r: 25 };
+    const gravity = 900;
+    const ballRadius = 12;
 
-    function makeSprite(width, height, painter) {
-      const sprite = document.createElement("canvas");
-      sprite.width = width;
-      sprite.height = height;
-      const sctx = sprite.getContext("2d");
-      painter(sctx, width, height);
-      return sprite;
-    }
-
-    const hoopSprite = makeSprite(90, 60, (sctx, w, h) => {
-      sctx.strokeStyle = "#d13f2d";
-      sctx.lineWidth = 6;
-      sctx.beginPath();
-      sctx.arc(w / 2, 18, 24, Math.PI * 0.1, Math.PI * 0.9);
-      sctx.stroke();
-      sctx.strokeStyle = "rgba(255,255,255,.65)";
-      for (let i = -2; i <= 2; i++) {
-        sctx.beginPath();
-        sctx.moveTo(w / 2 + i * 8, 20);
-        sctx.lineTo(w / 2 + i * 5, 56);
-        sctx.stroke();
+    class Ball {
+      constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.r = ballRadius;
       }
-    });
 
-    const ballSprite = makeSprite(36, 36, (sctx, w, h) => {
-      sctx.fillStyle = "#d97e2a";
-      sctx.beginPath();
-      sctx.arc(w / 2, h / 2, 13, 0, Math.PI * 2);
-      sctx.fill();
-      sctx.strokeStyle = "#8a4d1e";
-      sctx.lineWidth = 2;
-      sctx.stroke();
-    });
+      update(dt) {
+        this.vy += gravity * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
 
-    function ensureAudio() {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return;
-      if (!audioCtx) audioCtx = new AudioContextClass();
-      if (audioCtx.state === "suspended") audioCtx.resume();
-      if (!musicTimer) musicTimer = window.setInterval(playMusicStep, 280);
-    }
-
-    function beep(freq, duration, type, gainValue) {
-      if (!audioCtx || !freq) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
-    }
-
-    function playMusicStep() {
-      if (!audioCtx || audioCtx.state !== "running") return;
-      const tone = melody[beatStep % melody.length];
-      const low = bass[beatStep % bass.length];
-      beep(tone, 0.2, "triangle", 0.022);
-      if (low) beep(low, 0.2, "square", 0.018);
-      beatStep = (beatStep + 1) % melody.length;
-    }
-
-    function resetGame() {
-      ball = null;
-      made = 0;
-      timeLeft = 50;
-      ended = false;
-      dragging = false;
-      dragPos = null;
-      startTime = performance.now();
-      overlay.classList.remove("open");
-      scoreEl.textContent = "0";
-      timerEl.textContent = "50";
-      statusEl.textContent = "Drag from the ball rack to shoot.";
-    }
-
-    function spawnBall(vx, vy) {
-      ball = { x: rack.x, y: rack.y, vx, vy, r: 13, scored: false };
-    }
-
-    function bounceOffRim(sideX, sideY) {
-      const dx = ball.x - sideX;
-      const dy = ball.y - sideY;
-      const dist = Math.hypot(dx, dy);
-      const minD = ball.r + 7;
-      if (dist > 0 && dist < minD) {
-        const nx = dx / dist;
-        const ny = dy / dist;
-        ball.x = sideX + nx * minD;
-        ball.y = sideY + ny * minD;
-        const dot = ball.vx * nx + ball.vy * ny;
-        ball.vx -= 1.4 * dot * nx;
-        ball.vy -= 1.4 * dot * ny;
-        ball.vx *= 0.9;
-        ball.vy *= 0.9;
+        if (this.x - this.r < 0) { this.x = this.r; this.vx *= -0.8; }
+        if (this.x + this.r > canvas.width) { this.x = canvas.width - this.r; this.vx *= -0.8; }
+        if (this.y - this.r < 0) { this.y = this.r; this.vy *= -0.8; }
       }
+
+      draw(ctx) {
+        const grad = ctx.createRadialGradient(this.x - 5, this.y - 5, 2, this.x, this.y, this.r);
+        grad.addColorStop(0, '#ffcc00');
+        grad.addColorStop(1, '#ff9900');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      isOutOfBounds() {
+        return this.y > canvas.height + 100;
+      }
+
+      checkHoop() {
+        const dx = this.x - hoop.x;
+        const dy = this.y - hoop.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist < hoop.r + this.r && this.vy > 0;
+      }
+    }
+
+    function throwBall(fromX, fromY, toX, toY) {
+      if (ball) return;
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const speed = Math.sqrt(dx * dx + dy * dy) * 1.1;
+      const angle = Math.atan2(dy, dx);
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      ball = new Ball(fromX, fromY, vx, vy);
     }
 
     function update(dt) {
-      if (ended) return;
+      if (!gameActive) return;
 
-      const elapsed = Math.floor((performance.now() - startTime) / 1000);
-      timeLeft = Math.max(0, 50 - elapsed);
-      timerEl.textContent = String(timeLeft);
-      if (timeLeft <= 0) {
-        endRound();
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      timeLeft = Math.max(0, 60 - elapsed);
+      timerEl.textContent = timeLeft;
+
+      if (timeLeft === 0) {
+        endGame();
         return;
       }
 
-      if (!ball) return;
+      if (ball) {
+        ball.update(dt);
 
-      ball.vy += gravity * dt;
-      ball.x += ball.vx * dt;
-      ball.y += ball.vy * dt;
-      ball.vx *= 0.998;
+        if (ball.checkHoop()) {
+          score++;
+          scoreEl.textContent = score;
+          ball = null;
+        }
 
-      if (ball.y + ball.r > floorY) {
-        ball.y = floorY - ball.r;
-        ball.vy *= -0.52;
-        ball.vx *= 0.87;
-      }
-
-      if (ball.x + ball.r > backboardX && ball.y < 285) {
-        ball.x = backboardX - ball.r;
-        ball.vx *= -0.72;
-      }
-
-      bounceOffRim(hoop.x - hoop.r, hoop.y);
-      bounceOffRim(hoop.x + hoop.r, hoop.y);
-
-      if (!ball.scored) {
-        const withinX = ball.x > hoop.x - hoop.r + 3 && ball.x < hoop.x + hoop.r - 3;
-        const crossing = ball.y > hoop.y - 1 && ball.y < hoop.y + 10 && ball.vy > 0;
-        if (withinX && crossing) {
-          ball.scored = true;
-          made += 1;
-          scoreEl.textContent = String(made);
-          statusEl.textContent = "Swish!";
-          ensureAudio();
-          beep(880, 0.08, "triangle", 0.09);
+        if (ball && ball.isOutOfBounds()) {
+          ball = null;
         }
       }
-
-      if (Math.abs(ball.vx) < 8 && Math.abs(ball.vy) < 8 && ball.y > floorY - 16) {
-        ball = null;
-      }
-
-      if (ball && (ball.x < -60 || ball.x > 980 || ball.y > 560)) {
-        ball = null;
-      }
-    }
-
-    function endRound() {
-      ended = true;
-      finalCount.textContent = String(made);
-      resultTitle.textContent = made >= 7 ? "Top Shooter" : "Warm Up More";
-      overlay.classList.add("open");
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "#fff1d5";
-      ctx.fillRect(0, 0, canvas.width, 86);
-      ctx.fillStyle = "#ca2d43";
-      for (let i = 0; i < canvas.width; i += 64) ctx.fillRect(i, 0, 32, 86);
+      // Draw court
+      ctx.fillStyle = '#d2691e';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "#87563b";
-      ctx.fillRect(0, floorY, canvas.width, 60);
+      // Draw court lines
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(50, 100, canvas.width - 100, canvas.height - 150);
 
-      ctx.fillStyle = "#e8eef7";
-      ctx.fillRect(backboardX, 120, 18, 180);
-      ctx.strokeStyle = "#8f98a7";
-      ctx.strokeRect(backboardX, 120, 18, 180);
-
-      ctx.drawImage(hoopSprite, hoop.x - 45, hoop.y - 20);
-
-      ctx.fillStyle = "#2f6db2";
+      // Draw hoop
+      ctx.fillStyle = '#ff6b00';
       ctx.beginPath();
-      ctx.arc(rack.x, rack.y, rack.r, 0, Math.PI * 2);
+      ctx.arc(hoop.x, hoop.y + 40, 8, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 13px Verdana";
-      ctx.textAlign = "center";
-      ctx.fillText("SHOOT", rack.x, rack.y + 4);
+
+      // Draw rim
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(hoop.x, hoop.y, hoop.r, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Draw backboard
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillRect(hoop.x - 50, hoop.y - 60, 100, 90);
+
+      // Draw rack
+      ctx.fillStyle = '#654321';
+      ctx.fillRect(ballRack.x - ballRack.r, ballRack.y - ballRack.r, ballRack.r * 2, ballRack.r * 2);
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(ballRack.x - ballRack.r, ballRack.y - ballRack.r, ballRack.r * 2, ballRack.r * 2);
 
       if (ball) {
-        ctx.drawImage(ballSprite, ball.x - 18, ball.y - 18);
-      }
-
-      if (dragging && dragPos) {
-        ctx.strokeStyle = "rgba(26, 57, 121, 0.6)";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(rack.x, rack.y);
-        ctx.lineTo(dragPos.x, dragPos.y);
-        ctx.stroke();
+        ball.draw(ctx);
       }
     }
 
-    function loop(now) {
-      const dt = Math.min((now - lastTime) / 1000, 0.033);
-      lastTime = now;
+    function endGame() {
+      gameActive = false;
+      finalScoreEl.textContent = score;
+      modalEl.classList.add('open');
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = Math.min((now - lastFrame) / 1000, 0.033);
+      lastFrame = now;
+
       update(dt);
       draw();
-      requestAnimationFrame(loop);
+      requestAnimationFrame(gameLoop);
     }
 
-    function toCanvas(e) {
+    canvas.addEventListener('mousedown', (e) => {
+      if (!gameActive || ball) return;
       const rect = canvas.getBoundingClientRect();
-      return {
-        x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-        y: ((e.clientY - rect.top) / rect.height) * canvas.height
-      };
-    }
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const dx = x - ballRack.x;
+      const dy = y - ballRack.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-    canvas.addEventListener("pointerdown", (e) => {
-      if (ended || ball) return;
-      ensureAudio();
-      const p = toCanvas(e);
-      if (Math.hypot(p.x - rack.x, p.y - rack.y) > rack.r + 8) return;
-      dragging = true;
-      dragPos = p;
+      if (dist < ballRack.r * 1.5) {
+        dragging = true;
+        dragStart = { x, y };
+      }
     });
 
-    canvas.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
-      dragPos = toCanvas(e);
+    canvas.addEventListener('mouseup', (e) => {
+      if (dragging && dragStart) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        throwBall(ballRack.x, ballRack.y, x, y);
+        dragging = false;
+        dragStart = null;
+      }
     });
 
-    canvas.addEventListener("pointerup", (e) => {
-      if (!dragging || ended || ball) return;
-      dragging = false;
-      const p = toCanvas(e);
-      const dx = rack.x - p.x;
-      const dy = rack.y - p.y;
-      const launchVy = Math.min(dy * 3.9 - 120, -250);
-      spawnBall(dx * 3.9, launchVy);
-      ensureAudio();
-      beep(520, 0.08, "square", 0.07);
-      dragPos = null;
-    });
-
-    restartBtn.addEventListener("click", resetGame);
-
-    resetGame();
-    draw();
-    requestAnimationFrame(loop);
+    requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>

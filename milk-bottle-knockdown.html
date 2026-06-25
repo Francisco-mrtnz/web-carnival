@@ -5,379 +5,392 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Milk Bottle Knockdown</title>
   <style>
-    :root { --ink: #2e1f14; --panel: rgba(255, 244, 223, .94); --accent: #9a3f23; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; font-family: "Trebuchet MS", "Verdana", sans-serif; color: var(--ink); background: radial-gradient(circle at 16% 16%, #f6d7a8, transparent 30%), radial-gradient(circle at 82% 24%, #dfad79, transparent 35%), linear-gradient(160deg, #f2c489, #ce8f58 46%, #8a5634); display: grid; place-items: center; padding: 18px; }
-    .app { width: min(980px, 100%); background: var(--panel); border: 4px solid #fff; border-radius: 20px; box-shadow: 0 12px 24px rgba(20, 16, 35, .25); padding: 16px; }
-    .top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-    h1 { margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
-    .hud { display: flex; gap: 8px; flex-wrap: wrap; font-weight: 700; }
-    .pill { background: #fff; border: 2px solid rgba(47,109,178,.3); border-radius: 999px; padding: 6px 10px; }
-    canvas { width: 100%; height: auto; display: block; border-radius: 14px; border: 3px solid rgba(33,26,52,.18); background: linear-gradient(180deg, #ffd8a4 0%, #ef9b68 45%, #9b643f 100%); }
-    .meta { margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-weight: 700; color: #3c3258; }
-    .link { color: #224f87; text-decoration: none; border-bottom: 2px solid rgba(34,79,135,.35); }
-    .overlay { position: fixed; inset: 0; background: rgba(16,12,26,.66); display: none; place-items: center; padding: 16px; }
-    .overlay.open { display: grid; }
-    .card { background: #fff4dc; border: 3px solid #fff; border-radius: 14px; padding: 14px; text-align: center; width: min(420px, 100%); }
-    .btn { border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; background: #ffce48; color: #2f2a46; }
+    body { 
+      margin: 0; 
+      min-height: 100vh; 
+      font-family: "Trebuchet MS", Verdana, sans-serif; 
+      color: #fff;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .container {
+      width: min(980px, 100%);
+      background: rgba(0,0,0,0.3);
+      border-radius: 20px;
+      border: 3px solid #fff;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    h1 { margin: 0; font-size: 2.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    .stats {
+      display: flex;
+      gap: 15px;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+      border-radius: 10px;
+      display: block;
+      margin: 15px 0;
+      border: 2px solid rgba(0,0,0,0.1);
+    }
+    .info {
+      text-align: center;
+      font-weight: bold;
+      margin: 10px 0;
+      font-size: 1rem;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      font-weight: bold;
+    }
+    a { color: #fff; text-decoration: none; border-bottom: 2px solid #fff; }
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+    .modal.open { display: flex; }
+    .modal-content {
+      background: #fff;
+      border-radius: 15px;
+      padding: 30px;
+      text-align: center;
+      color: #333;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .modal-content h2 { margin: 0 0 15px; color: #667eea; font-size: 1.8rem; }
+    .modal-content p { margin: 10px 0; font-size: 1.2rem; font-weight: bold; }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: 0;
+      border-radius: 10px;
+      background: #667eea;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover { background: #5568d3; }
   </style>
 </head>
 <body>
-  <main class="app">
-    <section class="top">
-      <h1>Milk Bottle Knockdown</h1>
-      <div class="hud">
-        <span class="pill">Knocked: <span id="knocked">0</span>/6</span>
-        <span class="pill">Throws: <span id="throws">7</span></span>
-        <span class="pill">Goal: 4 bottles</span>
+  <div class="container">
+    <div class="header">
+      <h1>🥛 Milk Bottle Knockdown</h1>
+      <div class="stats">
+        <span>Down: <span id="score">0</span>/9</span>
+        <span>Throws: <span id="throws">5</span></span>
       </div>
-    </section>
-    <canvas id="gameCanvas" width="920" height="520" aria-label="Milk bottle knockdown game"></canvas>
-    <section class="meta">
-      <span id="status">Drag from the baseball and release.</span>
-      <a class="link" href="empty.html">Back to Midway</a>
-    </section>
-  </main>
+    </div>
+    <canvas id="canvas" width="920" height="520"></canvas>
+    <div class="info">Knock down all 9 bottles with your throws!</div>
+    <div class="footer">
+      <a href="empty.html">← Back</a>
+      <span>Goal: 9 bottles</span>
+    </div>
+  </div>
 
-  <div class="overlay" id="overlay" aria-live="polite">
-    <div class="card">
-      <h2 id="resultTitle">Round Over</h2>
-      <p>Bottles knocked: <strong id="finalCount">0</strong></p>
-      <button class="btn" id="restartBtn" type="button">Play Again</button>
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2>Game Over!</h2>
+      <p>Knocked Down: <span id="finalScore">0</span>/9</p>
+      <button onclick="location.reload()">Play Again</button>
     </div>
   </div>
 
   <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const knockedEl = document.getElementById("knocked");
-    const throwsEl = document.getElementById("throws");
-    const statusEl = document.getElementById("status");
-    const overlay = document.getElementById("overlay");
-    const resultTitle = document.getElementById("resultTitle");
-    const finalCount = document.getElementById("finalCount");
-    const restartBtn = document.getElementById("restartBtn");
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const throwsEl = document.getElementById('throws');
+    const modalEl = document.getElementById('modal');
+    const finalScoreEl = document.getElementById('finalScore');
 
-    const gravity = 820;
-    const bottleR = 18;
-    const ballR = 13;
-    const start = { x: 120, y: 428 };
-
-    let bottles = [];
+    let score = 0;
+    let throws = 5;
+    let gameActive = true;
     let ball = null;
-    let throwsLeft = 7;
-    let knocked = 0;
-    let ended = false;
     let dragging = false;
-    let dragPos = null;
-    let lastTime = performance.now();
+    let dragStart = null;
+    let lastFrame = Date.now();
+    let bottles = [];
 
-    let audioCtx = null;
-    let musicTimer = null;
-    let beatStep = 0;
-    const melody = [293.66, 349.23, 440, 392, 349.23, 329.63, 293.66, 246.94];
-    const bass = [98, null, 110, null, 87.31, null, 82.41, null];
+    const ballRack = { x: 100, y: 450, r: 30 };
+    const gravity = 900;
+    const ballRadius = 10;
 
-    function makeSprite(width, height, painter) {
-      const sprite = document.createElement("canvas");
-      sprite.width = width;
-      sprite.height = height;
-      const sctx = sprite.getContext("2d");
-      painter(sctx, width, height);
-      return sprite;
-    }
-
-    const bottleSprite = makeSprite(50, 50, (sctx, w, h) => {
-      sctx.fillStyle = "#f1e4d3";
-      sctx.beginPath();
-      sctx.arc(w / 2, h / 2, 18, 0, Math.PI * 2);
-      sctx.fill();
-      sctx.strokeStyle = "#715843";
-      sctx.lineWidth = 2;
-      sctx.stroke();
-      sctx.fillStyle = "#c5394a";
-      sctx.fillRect(w / 2 - 14, h / 2 - 4, 28, 8);
-    });
-
-    const ballSprite = makeSprite(34, 34, (sctx, w, h) => {
-      sctx.fillStyle = "#f2efe8";
-      sctx.beginPath();
-      sctx.arc(w / 2, h / 2, 13, 0, Math.PI * 2);
-      sctx.fill();
-      sctx.strokeStyle = "#8a7f73";
-      sctx.stroke();
-    });
-
-    function ensureAudio() {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) return;
-      if (!audioCtx) audioCtx = new AudioContextClass();
-      if (audioCtx.state === "suspended") audioCtx.resume();
-      if (!musicTimer) musicTimer = window.setInterval(playMusicStep, 300);
-    }
-
-    function beep(freq, duration, type, gainValue) {
-      if (!audioCtx || !freq) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(gainValue, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
-    }
-
-    function playMusicStep() {
-      if (!audioCtx || audioCtx.state !== "running") return;
-      const tone = melody[beatStep % melody.length];
-      const low = bass[beatStep % bass.length];
-      beep(tone, 0.2, "triangle", 0.022);
-      if (low) beep(low, 0.24, "sine", 0.018);
-      beatStep = (beatStep + 1) % melody.length;
-    }
-
-    function makeStack() {
-      const baseY = 400;
-      const rows = [3, 2, 1];
-      const stack = [];
-      let rowY = baseY;
-      for (let r = 0; r < rows.length; r++) {
-        const count = rows[r];
-        const startX = 640 - ((count - 1) * 42) / 2;
-        for (let i = 0; i < count; i++) {
-          stack.push({
-            x: startX + i * 42,
-            y: rowY,
-            vx: 0,
-            vy: 0,
-            knocked: false,
-            settled: false
-          });
-        }
-        rowY -= 44;
+    class Bottle {
+      constructor(x, y, index) {
+        this.x = x;
+        this.y = y;
+        this.r = 10;
+        this.vx = 0;
+        this.vy = 0;
+        this.rotation = 0;
+        this.rotationSpeed = 0;
+        this.down = false;
+        this.index = index;
       }
-      return stack;
-    }
 
-    function resetGame() {
-      bottles = makeStack();
-      ball = null;
-      throwsLeft = 7;
-      knocked = 0;
-      ended = false;
-      dragging = false;
-      dragPos = null;
-      overlay.classList.remove("open");
-      knockedEl.textContent = "0";
-      throwsEl.textContent = "7";
-      statusEl.textContent = "Drag from the baseball and release.";
-    }
+      update(dt) {
+        if (this.down) {
+          this.vy += gravity * dt;
+          this.y += this.vy * dt;
+          this.vx *= 0.98;
+          this.x += this.vx * dt;
+          this.rotation += this.rotationSpeed;
+          this.rotationSpeed *= 0.98;
 
-    function spawnBall(vx, vy) {
-      ball = { x: start.x, y: start.y, vx, vy, live: true };
-    }
-
-    function applyBottleCollisions() {
-      for (let i = 0; i < bottles.length; i++) {
-        for (let j = i + 1; j < bottles.length; j++) {
-          const a = bottles[i];
-          const b = bottles[j];
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const dist = Math.hypot(dx, dy);
-          const minD = bottleR * 2;
-          if (dist > 0 && dist < minD) {
-            const nx = dx / dist;
-            const ny = dy / dist;
-            const overlap = (minD - dist) * 0.5;
-            a.x -= nx * overlap;
-            a.y -= ny * overlap;
-            b.x += nx * overlap;
-            b.y += ny * overlap;
-
-            const rvx = b.vx - a.vx;
-            const rvy = b.vy - a.vy;
-            const sep = rvx * nx + rvy * ny;
-            if (sep < 0) {
-              const impulse = -(1 + 0.25) * sep * 0.45;
-              a.vx -= impulse * nx;
-              a.vy -= impulse * ny;
-              b.vx += impulse * nx;
-              b.vy += impulse * ny;
-            }
+          if (this.y > canvas.height - 10) {
+            this.y = canvas.height - 10;
+            this.vy = 0;
+            this.rotationSpeed = 0;
           }
         }
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-6, -15, 12, 30);
+
+        ctx.fillStyle = '#ff4444';
+        ctx.fillRect(-5, -12, 10, 8);
+
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-6, -15, 12, 30);
+
+        ctx.restore();
+      }
+
+      knockDown() {
+        if (!this.down) {
+          this.down = true;
+          this.vx = (Math.random() - 0.5) * 200;
+          this.vy = -300 - Math.random() * 200;
+          this.rotationSpeed = (Math.random() - 0.5) * 0.5;
+          return true;
+        }
+        return false;
+      }
+    }
+
+    class Ball {
+      constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.r = ballRadius;
+      }
+
+      update(dt) {
+        this.vy += gravity * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        if (this.x - this.r < 0) { this.x = this.r; this.vx *= -0.8; }
+        if (this.x + this.r > canvas.width) { this.x = canvas.width - this.r; this.vx *= -0.8; }
+        if (this.y - this.r < 0) { this.y = this.r; this.vy *= -0.8; }
+      }
+
+      draw(ctx) {
+        const grad = ctx.createRadialGradient(this.x - 3, this.y - 3, 2, this.x, this.y, this.r);
+        grad.addColorStop(0, '#ff9999');
+        grad.addColorStop(1, '#cc0000');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      isOutOfBounds() {
+        return this.y > canvas.height + 100;
+      }
+
+      checkBottles() {
+        for (let bottle of bottles) {
+          if (bottle.down) continue;
+          const dx = this.x - bottle.x;
+          const dy = this.y - bottle.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < this.r + 15) {
+            return bottle;
+          }
+        }
+        return null;
+      }
+    }
+
+    function throwBall(fromX, fromY, toX, toY) {
+      if (ball || throws <= 0) return;
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const speed = Math.sqrt(dx * dx + dy * dy) * 1.0;
+      const angle = Math.atan2(dy, dx);
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      ball = new Ball(fromX, fromY, vx, vy);
+      throws--;
+      throwsEl.textContent = throws;
+    }
+
+    function initBottles() {
+      bottles = [];
+      const positions = [
+        { x: 400, y: 200 },
+        { x: 500, y: 200 },
+        { x: 600, y: 200 },
+        { x: 350, y: 260 },
+        { x: 450, y: 260 },
+        { x: 550, y: 260 },
+        { x: 400, y: 320 },
+        { x: 500, y: 320 },
+        { x: 600, y: 320 }
+      ];
+      for (let i = 0; i < positions.length; i++) {
+        bottles.push(new Bottle(positions[i].x, positions[i].y, i));
       }
     }
 
     function update(dt) {
-      if (ended) return;
+      if (!gameActive) return;
 
-      if (ball && ball.live) {
-        ball.vy += gravity * dt;
-        ball.vx *= 0.998;
-        ball.x += ball.vx * dt;
-        ball.y += ball.vy * dt;
+      if (throws === 0 && !ball) {
+        endGame();
+        return;
+      }
 
-        for (const b of bottles) {
-          const dx = b.x - ball.x;
-          const dy = b.y - ball.y;
-          const d = Math.hypot(dx, dy);
-          const minD = bottleR + ballR;
-          if (d > 0 && d < minD) {
-            const nx = dx / d;
-            const ny = dy / d;
-            const speed = Math.hypot(ball.vx, ball.vy);
-            b.vx += nx * speed * 0.35;
-            b.vy += ny * speed * 0.35;
-            ball.vx *= -0.22;
-            ball.vy *= -0.18;
-            ensureAudio();
-            beep(180, 0.07, "square", 0.08);
+      if (ball) {
+        ball.update(dt);
+
+        const bottle = ball.checkBottles();
+        if (bottle) {
+          if (bottle.knockDown()) {
+            score++;
+            scoreEl.textContent = score;
           }
+          ball = null;
         }
 
-        if (ball.y > 520 || ball.x > 980 || ball.x < -40) {
-          ball.live = false;
-          if (throwsLeft <= 0) endRound();
-        }
-      }
-
-      for (const b of bottles) {
-        b.vy += gravity * dt;
-        b.x += b.vx * dt;
-        b.y += b.vy * dt;
-
-        if (b.y > 402) {
-          b.y = 402;
-          b.vy *= -0.14;
-          b.vx *= 0.86;
-        }
-
-        if (b.x < 480) { b.x = 480; b.vx *= -0.2; }
-        if (b.x > 820) { b.x = 820; b.vx *= -0.2; }
-
-        if (!b.knocked && (Math.abs(b.vx) > 80 || b.x < 540 || b.x > 740)) {
-          b.knocked = true;
-          knocked += 1;
-          knockedEl.textContent = String(knocked);
+        if (ball && ball.isOutOfBounds()) {
+          ball = null;
         }
       }
 
-      applyBottleCollisions();
-
-      if (throwsLeft <= 0 && (!ball || !ball.live)) {
-        endRound();
+      for (let bottle of bottles) {
+        bottle.update(dt);
       }
-    }
-
-    function endRound() {
-      ended = true;
-      finalCount.textContent = String(knocked);
-      resultTitle.textContent = knocked >= 4 ? "Jackpot Throwing" : "Try Again";
-      overlay.classList.add("open");
-    }
-
-    function drawBottle(b) {
-      ctx.save();
-      if (b.knocked) ctx.globalAlpha = 0.75;
-      ctx.drawImage(bottleSprite, b.x - 25, b.y - 25);
-      ctx.restore();
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "#fff1d5";
-      ctx.fillRect(0, 0, canvas.width, 86);
-      ctx.fillStyle = "#ca2d43";
-      for (let i = 0; i < canvas.width; i += 64) ctx.fillRect(i, 0, 32, 86);
+      // Draw backdrop
+      ctx.fillStyle = '#87ceeb';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = "#86553a";
-      ctx.fillRect(0, 430, canvas.width, 90);
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
 
-      ctx.fillStyle = "#6f482f";
-      ctx.fillRect(520, 404, 220, 14);
+      // Draw target area
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.strokeRect(300, 150, 400, 250);
+      ctx.setLineDash([]);
 
-      for (const b of bottles) drawBottle(b);
-
-      ctx.fillStyle = "#2f6db2";
-      ctx.beginPath();
-      ctx.arc(start.x, start.y, 38, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 13px Verdana";
-      ctx.textAlign = "center";
-      ctx.fillText("BALL", start.x, start.y + 4);
-
-      if (ball && ball.live) {
-        ctx.drawImage(ballSprite, ball.x - 17, ball.y - 17);
+      // Draw bottles
+      for (let bottle of bottles) {
+        bottle.draw(ctx);
       }
 
-      if (dragging && dragPos) {
-        ctx.strokeStyle = "rgba(26, 57, 121, 0.6)";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(start.x, start.y);
-        ctx.lineTo(dragPos.x, dragPos.y);
-        ctx.stroke();
+      // Draw rack
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(ballRack.x - ballRack.r, ballRack.y - ballRack.r, ballRack.r * 2, ballRack.r * 2);
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(ballRack.x - ballRack.r, ballRack.y - ballRack.r, ballRack.r * 2, ballRack.r * 2);
+
+      if (ball) {
+        ball.draw(ctx);
       }
     }
 
-    function loop(now) {
-      const dt = Math.min((now - lastTime) / 1000, 0.033);
-      lastTime = now;
+    function endGame() {
+      gameActive = false;
+      finalScoreEl.textContent = score;
+      modalEl.classList.add('open');
+    }
+
+    function gameLoop() {
+      const now = Date.now();
+      const dt = Math.min((now - lastFrame) / 1000, 0.033);
+      lastFrame = now;
+
       update(dt);
       draw();
-      requestAnimationFrame(loop);
+      requestAnimationFrame(gameLoop);
     }
 
-    function toCanvas(e) {
+    canvas.addEventListener('mousedown', (e) => {
+      if (!gameActive || ball) return;
       const rect = canvas.getBoundingClientRect();
-      return {
-        x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-        y: ((e.clientY - rect.top) / rect.height) * canvas.height
-      };
-    }
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const dx = x - ballRack.x;
+      const dy = y - ballRack.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-    canvas.addEventListener("pointerdown", (e) => {
-      if (ended || ball?.live || throwsLeft <= 0) return;
-      ensureAudio();
-      const p = toCanvas(e);
-      if (Math.hypot(p.x - start.x, p.y - start.y) > 44) return;
-      dragging = true;
-      dragPos = p;
+      if (dist < ballRack.r * 1.5) {
+        dragging = true;
+        dragStart = { x, y };
+      }
     });
 
-    canvas.addEventListener("pointermove", (e) => {
-      if (!dragging) return;
-      dragPos = toCanvas(e);
+    canvas.addEventListener('mouseup', (e) => {
+      if (dragging && dragStart) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+        throwBall(ballRack.x, ballRack.y, x, y);
+        dragging = false;
+        dragStart = null;
+      }
     });
 
-    canvas.addEventListener("pointerup", (e) => {
-      if (!dragging || ended || throwsLeft <= 0) return;
-      dragging = false;
-      const p = toCanvas(e);
-      const dx = start.x - p.x;
-      const dy = start.y - p.y;
-      const launchVy = Math.min(dy * 3.8 - 130, -260);
-      spawnBall(dx * 3.8, launchVy);
-      ensureAudio();
-      beep(420, 0.08, "square", 0.07);
-      throwsLeft -= 1;
-      throwsEl.textContent = String(throwsLeft);
-      dragPos = null;
-      statusEl.textContent = "Direct hit the center of the stack.";
-    });
-
-    restartBtn.addEventListener("click", resetGame);
-
-    resetGame();
-    draw();
-    requestAnimationFrame(loop);
+    initBottles();
+    requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>
